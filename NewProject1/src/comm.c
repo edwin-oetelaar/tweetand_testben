@@ -1,6 +1,4 @@
-
-/* Martin Thomas 4/2009 */
-/* ergens gevonden E. vd Oetelaar */
+/* found somewhere */
 
 #include "stm32f4xx.h"
 #include "comm.h"
@@ -24,6 +22,8 @@ void comm_put(unsigned char d)
 	USART_SendData(USARTx, (uint16_t)d);
 }
 
+#if 0
+/* not used in this project */
 void comm_init(void)
 {
 	USART_InitTypeDef USART_InitStructure;
@@ -54,4 +54,4 @@ void comm_init(void)
 	/* Enable the USART1 */
 	USART_Cmd(USARTx, ENABLE);
 }
-
+#endif

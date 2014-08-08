@@ -1,3 +1,8 @@
+/*
+ * NADA internet radio receiver (radio) and transmitter (encoder) using Mp3 or Ogg-Vorbis
+ * Circuit Cellar Challenge : wiznet 2014
+ *
+ */
 
 #include "stm32f4xx_conf.h"
 #include "FreeRTOS.h"
@@ -19,11 +24,12 @@
 #include "my_helpers.h"
 #include "term_io.h"
 #include "vs10xx.h"
+#include "ringbuffer.h"
 
 #define min(a,b) (((a)<(b))?(a):(b))
 
-uint8_t SPI_ReadByte(void);
-uint8_t SPI_SendByte(uint8_t byte);
+uint8_t WIZ_SPI_ReadByte(void);
+uint8_t WIZ_SPI_SendByte(uint8_t byte);
 uint8_t do_http_get(uint8_t sn, const char *url, void (writefunc)(const char *buf, uint32_t len));
 
 struct {
@@ -41,12 +47,19 @@ struct {
     uint8_t items[16]; // key buffer
 } my_KEYS_queue;
 
+char AssertStringBuffer[16];
+
 lcd_context_t LCD; // make a context
+
+jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will put stuff there
+volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
 
 EventGroupHandle_t xEventBits; // set by dhcp task when network is up and running, bit 0x01 is NETWORK-OK
 SemaphoreHandle_t xSemaphoreSPI2;
 SemaphoreHandle_t xSemaphoreWRAM; // WRAM is mem inside VS1063, must be protected, needs many read writes to registers, may not be interrupted
 SemaphoreHandle_t xSemaphoreWIZCHIP;
+
+extern uint8_t use_230400;
 
 // freetronicsLCDShield lcdshield(D8, D9, D4, D5, D6, D7, D3, A0);
 // RS  E   D0   D1  D2  D3   BL A0
@@ -96,20 +109,29 @@ void SERIAL_write(const char *s, uint32_t len)
     USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
+/* read audio bytes from the encoder over USART1, ALL USART1 interrupts */
 void USART1_IRQHandler(void)
 {
+    /* if Receive Register not empty then get byte */
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
-        uint8_t ch = USART1->DR;
-        // SERIAL_write(&ch,1);
+        /* get byte */
+        char ch = USART1->DR;
+        /* if we want to capture data store in buffer */
+        if (recorder_active_flag) {
+            /* lock free jack_ringbuffer is very good */
+            jack_ringbuffer_write(streambuffer, &ch, 1);
+        } else {
+            /* discard, TODO:  SET OVERRUN FLAG */
+        }
     }
 }
 
 // this is the interrupt request handler (IRQ) for ALL USART2 interrupts
 void USART2_IRQHandler(void)
 {
-    // check if the USART receive interrupt flag was set
+    /* if Receive Register not empty then get byte */
     if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
-        uint8_t ch = USART2->DR; // the character from the USART data register is saved in ch
+        uint8_t ch = USART2->DR;
         // als de buffer niet vol dan erbij proppen, anders jammer dan, weg ermee
         if (!QUEUE_FULL(my_RX_queue)) {
             QUEUE_PUT(my_RX_queue, ch);
@@ -132,18 +154,6 @@ void USART2_IRQHandler(void)
 
 /* USART 1 gaat aan de VS1063 hangen, hiermee komt data van de encoder binnen op interrupt basis, mooi he */
 
-
-
-
-static void vTask1(void *arg)
-{
-    uint32_t x = 0;
-    for (;;) {
-        vTaskDelay(100);
-        x = !x;
-        GPIO_WriteBit(GPIOA, GPIO_Pin_5, x); // LED pin
-    }
-}
 
 #if 0
 
@@ -219,74 +229,48 @@ static uint32_t wiz_hardware_reset_chip()
     return 0; // ok
 }
 
-void GPIO_Init_edwin(void)
-{
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_StructInit(&GPIO_InitStructure);
-
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC, ENABLE);
-
-    // pin B-6 dit wordt TX voor Serial USART 1
-    //GPIO_InitStructure.GPIO_Speed = GPIO_Low_Speed;
-    //GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    //GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    //GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    //GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-    //GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-    // pin A-5
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Low_Speed;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-    /* Data/Control pin PC4 */
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Low_Speed;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-    /* Chip Select (CS) van ILI9341 pin PB1 */
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Low_Speed;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-}
-
 /* USART 1 aan de Vs1063, pins PB6 en PB7 */
-void init_USART1(uint32_t baudrate)
+void USART1_hardware_init(uint32_t baudrate)
 {
     GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO pins used as TX and RX
-    USART_InitTypeDef USART_InitStruct; // this is for the USART2 initialization
+    USART_InitTypeDef USART_InitStruct; // this is for the USART1 initialization
     NVIC_InitTypeDef NVIC_InitStructure; // this is used to configure the NVIC (nested vector interrupt controller)
 
     // enable Clocks for APB2 (dus niet APB1) and GPIOB
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE); // ok
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE); // ok
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOA, ENABLE); // ok
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7; // Pins 6 (TX) and 7 (RX) are used
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+    /* defaults in struct */
+    GPIO_StructInit(&GPIO_InitStruct);
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF; // alt function
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP; // push pull
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed; // fast
+
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP; // no pull needed
     GPIO_Init(GPIOB, &GPIO_InitStruct); // poort B B B B B B
 
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
+    GPIO_Init(GPIOA, &GPIO_InitStruct); // poort A voor pin 10 RX
+
     //Connect to AF
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); //
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); // usart1 TX
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1); // usart1 RX
+
+    /* defaults in struct */
+    USART_StructInit(&USART_InitStruct);
 
     USART_InitStruct.USART_BaudRate = baudrate;
     USART_InitStruct.USART_WordLength = USART_WordLength_8b;
     USART_InitStruct.USART_StopBits = USART_StopBits_1;
     USART_InitStruct.USART_Parity = USART_Parity_No;
     USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+    USART_InitStruct.USART_Mode =  USART_Mode_Tx | USART_Mode_Rx;
+    // USART_OverSampling8Cmd(USART1,1); /* allow for very high bitrates, set oversample to 8 instead of 16 */
+
+
+    /* write values into registers*/
     USART_Init(USART1, &USART_InitStruct);
 
     USART_ITConfig(USART1, USART_IT_RXNE, ENABLE); // enable the USART1 receive interrupt
@@ -297,32 +281,40 @@ void init_USART1(uint32_t baudrate)
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0f;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0f;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+    /* write into registers */
     NVIC_Init(&NVIC_InitStructure);
 
-    USART_Cmd(USART1, ENABLE); //Enable USART1
+    /* Enable USART1 */
+    USART_Cmd(USART1, ENABLE);
 }
 
-/* debug info op USART 2 */
-void init_USART2(uint32_t baudrate)
+/* debug info on USART 2 connected to USB */
+void USART2_hardware_init(uint32_t baudrate)
 {
     GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO pins used as TX and RX
     USART_InitTypeDef USART_InitStruct; // this is for the USART2 initialization
     NVIC_InitTypeDef NVIC_InitStructure; // this is used to configure the NVIC (nested vector interrupt controller)
 
+    /* init the struct with defaults */
+    GPIO_StructInit(&GPIO_InitStruct);
+    USART_StructInit(&USART_InitStruct);
+
+
     // enable Clocks for APB1 and GPIOA
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3; // Pins 2 (TX) and 3 (RX) are used
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2  | GPIO_Pin_3; // Pins 2 (TX) and 3 (RX) are used
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     //Connect to AF
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2); //
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2); // PA2 tx
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2); // PA3 rx
 
     USART_InitStruct.USART_BaudRate = baudrate;
     USART_InitStruct.USART_WordLength = USART_WordLength_8b;
@@ -367,6 +359,11 @@ void init_Wiz_SPI_GPIO(void)
 
     // enable Clocks for APB1 and GPIOA
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    /* defaults in struct */
+    GPIO_StructInit(&GPIO_InitStruct);
+
+    /* set up GPIO pins */
+
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7; // Pins 2 (TX) and 3 (RX) are used
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
@@ -385,15 +382,13 @@ void init_Wiz_SPI_GPIO(void)
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
     // de inputs
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_10; // Pins 10 : Int en Pin 15 : RDY
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15; /*  | GPIO_Pin_10 */ // Pins 10 : Int en Pin 15 : RDY
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-
     // enable the SPI clocks
-
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE); // for SPI1
     // set the SPI parameters to sane defaults
     SPI_StructInit(&SPI_InitStruct);
@@ -412,49 +407,37 @@ void init_Wiz_SPI_GPIO(void)
 
 }
 
-
-
 void wiz_chip_select(void)
 {
-    // PA11
+    // PA11 modify for your hardware
     GPIO_WriteBit(GPIOA, GPIO_Pin_11, 0);
 }
 
 void wiz_chip_deselect(void)
 {
-    // PA11
+    // PA11 modify for your hardware
     GPIO_WriteBit(GPIOA, GPIO_Pin_11, 1);
 }
 
-// volatile int32_t lockcounter =0;
-
 void wizchip_lock(void)
 {
-    //  lockcounter++;
-    //  xprintf("X=%d\r\n",lockcounter);
     xSemaphoreTake(xSemaphoreWIZCHIP,5000);
 }
 
 void wizchip_unlock(void)
 {
-    //  lockcounter--;
-    //  xprintf("Y=%d\r\n",lockcounter);
-
-    //  xprintf("Y\r\n");
     xSemaphoreGive(xSemaphoreWIZCHIP);
 }
 
 /**
  * @brief  Reads a byte from the SPI .
- * @note   This function must be used only if the Start_Read_Sequence function
- *         has been previously called.
  * @param  None
  * @retval Byte Read from the SPI .
  */
 
-uint8_t SPI_ReadByte(void)
+uint8_t WIZ_SPI_ReadByte(void)
 {
-    return (SPI_SendByte(0));
+    return (WIZ_SPI_SendByte(0));
 }
 
 /**
@@ -463,7 +446,7 @@ uint8_t SPI_ReadByte(void)
  * @param  byte: byte to send.
  * @retval The value of the received byte.
  */
-uint8_t SPI_SendByte(uint8_t byte)
+uint8_t WIZ_SPI_SendByte(uint8_t byte)
 {
     /*!< Loop while DR register in not empty */
     while (SPI_I2S_GetFlagStatus(WIZNET_SPI, SPI_I2S_FLAG_TXE) == RESET);
@@ -490,8 +473,8 @@ static void vTaskDHCP(void *arg)
 
     /* netwerk buffer sizes per socket */
     uint8_t buffsizes[2][8] = {
-        {2, 2, 8, 2, 2, 0, 0, 0},
-        {2, 2, 8, 2, 2, 0, 0, 0}
+        {2, 2, 2, 2, 2, 2, 2, 2},
+        {2, 2, 2, 2, 2, 2, 2, 2}
     };
 
     wiz_NetInfo ni = { // new network info, we copy the MAC from eeprom
@@ -509,8 +492,8 @@ static void vTaskDHCP(void *arg)
     /* callbacks toekennen voor chipselect, zend en ontvang byte van SPI */
     reg_wizchip_cris_cbfunc(wizchip_lock,wizchip_unlock);
     reg_wizchip_cs_cbfunc(wiz_chip_select, wiz_chip_deselect);
-    reg_wizchip_spi_cbfunc(SPI_ReadByte, /* read single byte */
-                           SPI_SendByte /* send single byte */
+    reg_wizchip_spi_cbfunc(WIZ_SPI_ReadByte, /* read single byte */
+                           WIZ_SPI_SendByte /* send single byte */
                           );
 
     /* reset w550io hardware module, dit laadt de defaults */
@@ -555,22 +538,6 @@ static void vTaskDHCP(void *arg)
     /* als we hier komen zit er een stekker in de UTP met signalen */
 
     ctlwizchip(CW_INIT_WIZCHIP, buffsizes); // set up the buffer sizes inside the chip
-
-//    /* maak kopie van status en mac die de chip nu heeft die heeft de PIC erin geschoten */
-//
-//    wiz_NetInfo *oldinfo = pvPortMalloc(sizeof(wiz_NetInfo)); /* memory for temp buffer */
-//
-//    if (oldinfo) {
-//        /* get the info */
-//        ctlnetwork(CN_GET_NETINFO, oldinfo); // GET info from chip
-//        /* copy just the mac address */
-//        int i;
-//        for (i=0; i<6; i++) {
-//            ni.mac[i] = oldinfo->mac[i];     // copy de gekregen MAC in de nieuwe structure
-//        }
-//        /* free buffer */
-//        vPortFree(oldinfo);
-//    }
 
     SERIAL_puts("=== before configure ==\r\n");
     dump_network_info(SERIAL_puts); // gebruik een callback voor de output
@@ -666,17 +633,180 @@ void vTimerCallback( void *ptr)
     /* add music player timers here too ? */
 }
 
-void vTask5( void *pvParameters )
+uint8_t VS_Get_Serial_Byte(void)
 {
-    /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */\
+    while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET) {
+        /* spin here */
+    };
+    uint8_t t = USART_ReceiveData(USART1) & 0xFF;
+
+    return (t);
+}
+
+uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password)
+{
+    uint8_t host_ip[]= {0,0,0,0};
+    uint8_t mijn_dns[] = { 0,0,0,0 };
+    int rv = 0;
+    // get DNS server ip
+    getDNSfromDHCP(mijn_dns);
+
+    uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
+    // init dns request
+    DNS_init(1, buf_dns, xTaskGetTickCount()); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
+    // do the request on given server
+    int8_t rvx = DNS_run(mijn_dns,host,host_ip);
+    if (rvx == 0) {
+        xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
+        vPortFree(buf_dns);
+    } else {
+        vPortFree(buf_dns);
+        xprintf("dns error\r\n");
+        return -1;
+    }
+
+    rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
+    xprintf("sock=%d\r\n",rv);
+    rv = connect(2,host_ip,port);
+    xprintf("con=%d\r\n",rv);
+
+    const uint16_t bufsize = 2048; // 8192; // size of buf in Wiznet voor deze socket
+
+    char *buf = pvPortMalloc(bufsize); // pak buf van systeem
+    char *auth1 = pvPortMalloc(256); // pak buf van systeem
+    char *auth2 = pvPortMalloc(256); // pak buf van systeem
+
+    if (buf == NULL || auth1 == NULL || auth2 == NULL) {
+        // out of memory
+        vPortFree(buf);
+        vPortFree(auth1);
+        vPortFree(auth2);
+        xprintf("out of mem\r\n");
+        return -1;
+    }
+
+    strcpy(auth1,"source:");
+    strcat(auth1,password);
+    base64encode(auth1,strlen(auth1),auth2,256);
+    int i;
+    i = sprintf(buf, "SOURCE /%s ICE/1.0\r\n"
+                "Content-Type: audio/mpeg\r\n"
+                "Authorization: Basic %s\r\n"
+                "User-Agent: WizStream1\r\n"
+                "ice-public: 1\r\n"
+                "Pragma: no-cache\r\n"
+                "Cache-Control: no-cache, no-transform, private, no-store, proxy-revalidate\r\n\r\n"
+                ,mntpnt, auth2
+               );
+
+    vPortFree(auth1);
+    vPortFree(auth2);
+
+    rv= send(2,buf,i);
+
+    /* wait for server response, can be 200 = OK, 401=Bad password, 501 server error, 403 mount busy */
+    /* HTTP/1.0 200 */
+
+    uint16_t len = getSn_RX_RSR(sn);
+    uint32_t timeout = 5000;
+    while (len < 13 && timeout != 0) {
+        len = getSn_RX_RSR(sn);
+        vTaskDelay(1);
+        timeout--;
+    }
+
+    if (timeout == 0) {
+        return -2;
+    }
+
+    len=recv(sn,buf,bufsize);
+
+    if (!strncmp(buf,"HTTP/1.0 200 ",13)) {
+        // ok
+        // start sending data now
+    } else if (!strncmp(buf,"HTTP/1.0 401 ",13)) {
+        // bad password
+        xprintf("bad pasword\r\n");
+        return -3;
+    } else if (!strncmp(buf,"HTTP/1.0 403 ",13)) {
+        // mountpoint busy
+        xprintf("mountpoint busy\r\n");
+        return -4;
+    }
+
+    /* start data pump here */
+    radio_player_t *rp = pvPortMalloc(sizeof(radio_player_t));
+    streambuffer = jack_ringbuffer_create(32768); // global variable
+    //xprintf("sb=%x",streambuffer);
+
+    if(buf && rp && streambuffer) {
+        /* zet volume zacht van de output */
+        VS_Volume_Set(0x2020);
+        xprintf("rec test serial %d\r\n", bufsize);
+        memset(rp,0,sizeof(radio_player_t));
+        rp->devicemode = DevMode_TX_Ice_Serial;
+        rp->encoding_preset = 0; // mp3
+        xprintf("tx via serial\r\n");
+        recorder_active_flag = 1; // we have a ringbuffer so start using it
+        VS_Encoder_Init(rp);
+
+        /* data starts flowing into usart 1 now */
+        int n=0;
+        int nn=0;
+        while (1) {
+
+            if (jack_ringbuffer_read_space(streambuffer) > bufsize) {
+                // we have data in the buffer for the network
+                jack_ringbuffer_read(streambuffer,buf,bufsize);
+                int32_t x = send(sn,buf,bufsize);
+                if (x < 0 ) {
+                    xprintf("transmission end\r\n");
+                    break;
+                }
+                xprintf("x\r\n");
+
+            } else {
+                nn++;
+                if (nn==100) {
+                    size_t inbuf = jack_ringbuffer_read_space(streambuffer);
+                    size_t frbuf = jack_ringbuffer_write_space(streambuffer);
+                    int fullness = inbuf <<2  / bufsize << 2;
+                    char tt[32];
+                    sprintf(tt,"%5d %5d %5d\r\n",inbuf,frbuf,fullness);
+                    SERIAL_puts(tt);
+                    nn=0;
+                }
+                vTaskDelay(1); //
+            }
+
+        }
+        /* free memory */
+        // vPortFree(tmp);
+        // vPortFree(rp);
+
+    }
+    return rv;
+}
+
+void vTaskApplication( void *pvParameters )
+{
+    /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */
 
     EventBits_t xx = xEventGroupWaitBits( xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY );
 
     SERIAL_puts("Network flag is OK\r\n");
+    VS_Hard_Reset();
+    VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+    VS_Volume_Set(0x0202);
+    /* nu encoden naar server */
+    xprintf("start streaming\r\n");
+    int8_t rx = stream_to_test_server(2, "s1.vergadering-gemist.nl", 8000 /*port*/, "test"/*mountpoint*/ , "test" /*password*/);
+    xprintf("stop streaming %d\r\n",rx);
+
     /* we gaan een DNS lookup doen naar de 'SERVER' die ik nog niet ken */
 
     // uint8_t host[] = "icecast.omroep.nl";
-    uint8_t host[] = "vergadering-gemist.nl";
+    char host[] = "vergadering-gemist.nl";
 
     uint8_t host_ip[]= {0,0,0,0}; // ip dat ik van de DNS terug krijg (de laatste)
     uint8_t mijn_dns[] = { 0,0,0,0 }; // moet van DHCP komen, hierin kopieren
@@ -701,9 +831,7 @@ void vTask5( void *pvParameters )
     }
     if (rvx == 0) {
         // success flag
-        char txt[40];
-        sprintf(txt,"ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
-        SERIAL_puts(txt);
+        xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
     }
 
     if (rvx < 0) {
@@ -715,31 +843,31 @@ void vTask5( void *pvParameters )
     VS_Hard_Reset();
     SERIAL_puts("step 2\r\n");
 
-    VS_Test_Sine(1, 100);
+    VS_Test_Sine(1, 100); // sine on
     SERIAL_puts("step 3\r\n");
-    vTaskDelay(200);
-    VS_Test_Sine(0, 100);
+    vTaskDelay(200); // pause
+    VS_Test_Sine(0, 100); // sine off
     SERIAL_puts("step 4\r\n");
-    // VS_Registers_Dump();
+
 
     VS_Volume_Set(0x0202);
     SERIAL_puts("step volume\r\n");
 
 
     extern const uint8_t sample_edwin[] ;
-    VS_SDI_JAS_Buffer(sample_edwin, 20081 );
+    VS_SDI_JAS_Buffer((char*)sample_edwin, 20081 ); // play sample 1
     int i;
-    uint8_t zeroes[] = {0,0,0,0,0,0,0,0,0,0};
+    char zeroes[] = {0,0,0,0,0,0,0,0,0,0};
     for (i=0; i<100; i++) {
-        VS_SDI_JAS_Buffer(zeroes, sizeof(zeroes) );
+        VS_SDI_JAS_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
     }
 
     SERIAL_puts("step 5\r\n");
     extern const uint8_t sample_ben[] ;
-    VS_SDI_JAS_Buffer(sample_ben, 10421 );
+    VS_SDI_JAS_Buffer((char*)sample_ben, 10421 ); // play sample 2
 
     for (i=0; i<100; i++) {
-        VS_SDI_JAS_Buffer(zeroes, sizeof(zeroes) );
+        VS_SDI_JAS_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
     }
 
     SERIAL_puts("step 6\r\n");
@@ -747,16 +875,16 @@ void vTask5( void *pvParameters )
     rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
     xprintf("sock=%d\r\n",rv);
 
-    /* opname starten */
+    /* recording start */
     const uint32_t recbufsize = 32768; // bytes
-    const uint32_t recbufsize_wrds = recbufsize >> 1;
+    const uint32_t recbufsize_wrds = recbufsize >> 1; // words
 
     uint8_t *tmp = pvPortMalloc(recbufsize);
     radio_player_t *rp = pvPortMalloc(sizeof(radio_player_t));
     const uint32_t serial_variant = 1;
 
     if (serial_variant == 0) {
-        /* variant met uitlezen van data uit de REGISTERS van de VS1063 */
+        /* variant reading data from REGISTERS of VS1063 via SPI */
         if(tmp && rp) {
             xprintf("rec test %d %d\r\n", recbufsize, recbufsize_wrds);
             memset(rp,0,sizeof(radio_player_t));
@@ -786,50 +914,54 @@ void vTask5( void *pvParameters )
                     // fwrite(recBuf, 1, 2*n, writeFp);
                     fileSize += 2*n;
                 } else {
-                    /* The following read from SCI_RECWORDS may appear redundant.
-                       But it's not: SCI_RECWORDS needs to be rechecked AFTER we
-                       have seen that SM_CANCEL have cleared. */
-                    //  if (playerState != psPlayback && !(ReadSci(SCI_MODE) & SM_CANCEL)
-                    //          && !ReadSci(SCI_RECWORDS)) {
-                    //     playerState = psStopped;
-                    // }
+                    /* nothing to do */
                 }
             }
+            /* free memory */
+            //  vPortFree(tmp);
+            // vPortFree(rp);
         }
     } else {
-        /* de serial port variant */
+        /* serial port variant reading encoded bytes over USART1 */
         if(tmp && rp) {
-            xprintf("rec test serial %d %d\r\n", recbufsize, recbufsize_wrds);
+            xprintf("rec test serial %d %d\r\n", recbufsize, recbufsize);
             memset(rp,0,sizeof(radio_player_t));
 
             rp->devicemode = DevMode_TX_Ice_Serial;
             rp->encoding_preset = 0; // mp3
-            VS_Encoder_Init(rp);
-
-            /* data starts flowing into usart 1 now */
             xprintf("via serial\r\n");
+            VS_Encoder_Init(rp);
+            /* data starts flowing into usart 1 now */
+            int n=0;
+            uint8_t *rbp = tmp; // ptr naar buf
+            int counter = recbufsize;
             /* just wait until done */
-
-            vTaskDelay(10000); // 10 sec
+            while (counter) {
+                *rbp = VS_Get_Serial_Byte();
+                rbp++;
+                counter--;
+            }
+            /* free memory */
+            // vPortFree(tmp);
+            // vPortFree(rp);
 
         }
 
-        /* nu de encoder stoppen */
+        /* signal encoder to stop set cancel flag */
+        /*spec page 57 */
+        /*
+        When you want to finish encoding a file, set bit SM_CANCEL in SCI_MODE.
+        After a while (typically less than 100 ms), SM_CANCEL will clear.
+        */
         VS_Write_SCI(SCI_MODE, VS_Read_SCI(SCI_MODE) | SM_CANCEL);
         xprintf("wait enc stop\r\n");
-        /* kijken of de encoder gestopt is */
+        /* wait until encoder really stopped */
         do {
             int x = VS_Read_SCI(SCI_RECWORDS);
             xprintf("x in encoder =%d\r\n",x);
         } while (VS_Read_SCI(SCI_MODE) & SM_CANCEL);
 
         xprintf("enc is stop\r\n");
-        /*spec page 57 */
-        /*
-        When you want to finish encoding a file, set bit SM_CANCEL in SCI_MODE.
-        After a while (typically less than 100 ms), SM_CANCEL will clear.
-        Done that
-        */
 
         /* If using SCI for data transfers, read all remaining words using SCI_HDAT1/SCI_HDAT0. */
         int x = VS_Read_SCI(SCI_RECWORDS);
@@ -849,10 +981,10 @@ void vTask5( void *pvParameters )
         and bits 7:0 contain the last byte that still should be written
         to the output file. Now write 0 to endFillByte.
         */
-        uint16_t endfilbyte = VS_Read_SCI(0x1e06);
+        uint16_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE); /* 0x1e06*/
         xprintf("endfil = %d\r\n",endfilbyte);
-        VS_Write_SCI(0x1e06,0);
-        VS_Write_SCI(0x1e06,0);
+        // VS_Write_SDI(0);
+        // VS_Write_SDI(0);
 
         /* When all samples have been transmitted, SM_ENCODE bit of SCI_MODE will be
         cleared by VS1063a, and SCI_HDAT1 and SCI_HDAT0 are cleared.
@@ -864,7 +996,7 @@ void vTask5( void *pvParameters )
 
         VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
         VS_Volume_Set(0x0202);
-//        VS_Soft_Reset(DEFAULT_DIVIDER);
+
 
         /* afspelen van opgenomen buffer */
         VS_SDI_JAS_Buffer(tmp, recbufsize );
@@ -872,12 +1004,16 @@ void vTask5( void *pvParameters )
         for (i=0; i<100; i++) {
             VS_SDI_JAS_Buffer(zeroes, sizeof(zeroes) );
         }
+        /* done with memory*/
         vPortFree(tmp);
         vPortFree(rp);
 
 //   uint8_t ikip[] = {192,168,1,1};
         xprintf("done playback\r\n");
     }
+
+
+
 #define ARROW_HACK 1
 #if ARROW_HACK
     host_ip[0] = 81;
@@ -890,7 +1026,7 @@ void vTask5( void *pvParameters )
 
     const uint16_t bufsize = 8192; // size of buf in Wiznet voor deze socket
 
-    uint8_t *buf = pvPortMalloc(bufsize); // pak buf van systeem
+    char *buf = pvPortMalloc(bufsize); // pak buf van systeem
     i = sprintf(buf, // "GET /radio1-sb-aac HTTP/1.1\r\n" /* radio1-sb-aac  radio2-sb-aac 3 4 etc */
                 "GET / HTTP/1.1\r\n"
                 //   "GET /live128 HTTP/1.1\r\n"
@@ -938,16 +1074,29 @@ int main(void)
     QUEUE_INIT(my_RX_queue);
     QUEUE_INIT(my_KEYS_queue);
 
-    GPIO_Init_edwin();
-    VLSI_SPI_GPIO_Init();
-    init_USART2(115200);
-    init_USART1(115200*4); // moet hoger worden
+//   GPIO_Init_edwin();
+    VS_SPI_GPIO_init();
+    USART2_hardware_init(115200);
+
+    /* setup USART1 speed */
+    if (use_230400)
+        USART1_hardware_init(230400); // moet hoger worden?
+    else
+        USART1_hardware_init(460800);
+
+    uint16_t i;
+    for (i=0; i<255; i++) {
+        while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET); // Wait for Empty
+        USART_SendData(USART1, i); // Echo Char
+    }
+
     SERIAL_puts("Boot\r\n");
     adc_configure();
 
-    xSemaphoreSPI2 = xSemaphoreCreateMutex();
-    xSemaphoreWRAM = xSemaphoreCreateMutex();
-    xSemaphoreWIZCHIP = xSemaphoreCreateMutex();
+    xSemaphoreSPI2 = xSemaphoreCreateMutex(); // SPI register protection
+    xSemaphoreWRAM = xSemaphoreCreateMutex(); // internal ram of VS1063 protection
+    xSemaphoreWIZCHIP = xSemaphoreCreateMutex(); // internal registers of W5500 protection
+
     if (xSemaphoreSPI2 == NULL || xSemaphoreWRAM == NULL || xSemaphoreWIZCHIP == NULL) {
         SERIAL_puts("Out of memory. xSemaphoreCreateMutex\r\n");
         while (1) {
@@ -974,9 +1123,9 @@ int main(void)
     xTimerStart(xSecondenTimer,0);
 
     /* Create Start thread */
-    xTaskCreate(vTask1, "Ben_Thread", 256, NULL, 0, NULL);
+//   xTaskCreate(vTask1, "Ben_Thread", 256, NULL, 0, NULL);
     xTaskCreate(vTask2, "Theo_Thread", 256, NULL, 0, NULL);
-    xTaskCreate(vTask5, "App", 256, NULL, 0, NULL);
+    xTaskCreate(vTaskApplication, "App", 512, NULL, 0, NULL);
 
     xTaskCreate(vTaskDHCP, "DHCP", 256, NULL, 0, NULL); /* stack must be large or crash will happen */
     // assert_failed("Test 1235", 8888);
@@ -1009,24 +1158,29 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask,
 void assert_failed(uint8_t *file, uint32_t line)
 {
     taskDISABLE_INTERRUPTS();
-    //    SERIAL_puts((uint8_t*)"\r\nAssert: ");
-    char buf[6];
+
     char *s = (char *) file;
     USART_ITConfig(USART2, USART_IT_TXE | USART_IT_RXNE, DISABLE);
     while (*s) {
+        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET) {
+            ;
+        }
         USART_SendData(USART2, *s);
         s++;
     }
 
-    snprintf((char *) buf, 20, " %" PRIu32, line);
-    s = buf;
+    snprintf( AssertStringBuffer, sizeof(AssertStringBuffer) , " %" PRIu32, line);
+    s = AssertStringBuffer;
     while (*s) {
+        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET) {
+            ;
+        }
         USART_SendData(USART2, *s);
         s++;
     }
-    // SERIAL_puts(buf);
-    while (1) {
 
+    while (1) {
+        /* hang here so we can attach a debugger */
     }
 }
 

@@ -1,7 +1,6 @@
 /*
-Original by Wiznet, modified by Edwin vd Oetelaar
-*/
-
+ * Original by Wiznet, modified by .. name removed
+ */
 
 #ifndef	_DNS_H_
 #define	_DNS_H_
@@ -9,7 +8,7 @@ Original by Wiznet, modified by Edwin vd Oetelaar
 
 /*
  * @brief Define it for Debug & Monitor DNS processing.
- * @note If defined, it dependens on <stdio.h>
+ * @note If defined, it depends on <stdio.h>
  */
 
 //#define _DNS_DEBUG_
@@ -18,7 +17,7 @@ Original by Wiznet, modified by Edwin vd Oetelaar
  * @brief Maxium length of your queried Domain name
  * @todo SHOULD BE defined it equal as or greater than your Domain name length + null character(1)
  * @note SHOULD BE careful to stack overflow because it is allocated 1.5 times as MAX_DOMAIN_NAME in stack.
- * Note: Edwin fixed dit, we gebruiken geen STACK meer hiervoor
+ * Note: name removed  fixed this, we do not use the stack anymore for this
  */
 
 #define MAX_DOMAIN_NAME   (64) // 16       // for example "www.google.com"
@@ -48,11 +47,12 @@ void DNS_init(uint8_t s, uint8_t * buf, uint16_t request_id);
  * @note This funtion blocks until success or fail. max time = @ref MAX_DNS_RETRY * @ref DNS_WAIT_TIME
  */
 
-int8_t DNS_run(uint8_t * dns_ip, uint8_t * name, uint8_t * ip_from_dns);
+int8_t DNS_run(const uint8_t *dns_ip, const char *name, uint8_t *ip_from_dns);
 /*
  * @brief DNS 1s Tick Timer handler
  * @note SHOULD BE register to your system 1s Tick timer handler
  */
 
 void DNS_time_handler(void);
+
 #endif	/* _DNS_H_ */

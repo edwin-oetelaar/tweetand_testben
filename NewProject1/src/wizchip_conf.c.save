@@ -154,7 +154,7 @@ void reg_wizchip_cs_cbfunc(void(*cs_sel)(void), void(*cs_desel)(void))
     }
 }
 
-void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint32_t addr, uint8_t wb))
+void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint32_t addr, uint8_t wb) )
 {
     while(!(WIZCHIP.if_mode & _WIZCHIP_IO_MODE_BUS_));
 
@@ -167,8 +167,8 @@ void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint
     }
 }
 
-void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), void (*spi_wb)(uint8_t wb)
-                            /* ,void (*spi_write_buffer)(uint8_t *pb, uint16_t len)*/ )
+/* register callback functions for SPI */
+void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), uint8_t (*spi_wb)(uint8_t wb) )
 {
     while(!(WIZCHIP.if_mode & _WIZCHIP_IO_MODE_SPI_));
 
@@ -182,6 +182,7 @@ void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), void (*spi_wb)(uint8_t wb)
     }
 }
 
+/* sort of IOCTL function for wiznet chip */
 int8_t ctlwizchip(ctlwizchip_type cwtype, void* arg)
 {
     uint8_t tmp = 0;

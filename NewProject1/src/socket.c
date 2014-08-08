@@ -1,5 +1,6 @@
-/* Part of wiznet challenge, based on wiznet code,
- * modified by Edwin vd Oetelaar
+/*
+ * Part of wiznet challenge, based on wiznet code
+ * modified by .. name removed
  * version 1.0.3
  * date 2013/10/21
  * author MidnightCow
@@ -40,7 +41,10 @@ static uint16_t sock_next_rd[_WIZCHIP_SOCK_NUM_] = { 0, };
       if(len == 0) return SOCKERR_DATALEN;   \
    }while(0);              \
 
-
+/* API function, init a socket (sn) using TCP/UDP/RAW, local port (port) using (flag)s
+ * return socket number on success,
+ * return < 0 on error
+ */
 int8_t socket(uint8_t sn, uint8_t protocol, uint16_t port, uint8_t flag)
 {
     CHECK_SOCKNUM();
@@ -110,6 +114,7 @@ int8_t socket(uint8_t sn, uint8_t protocol, uint16_t port, uint8_t flag)
     return (int8_t) sn;
 }
 
+/* API function : close() connection on socket (sn) */
 int8_t close(uint8_t sn)
 {
     CHECK_SOCKNUM();
@@ -126,6 +131,7 @@ int8_t close(uint8_t sn)
     return SOCK_OK;
 }
 
+/* API function : listen() on socket */
 int8_t listen(uint8_t sn)
 {
     CHECK_SOCKNUM();
@@ -142,13 +148,12 @@ int8_t listen(uint8_t sn)
     return SOCK_OK;
 }
 
+/* API function : connect() TCP to addres on socket sn, using port */
 int8_t connect(uint8_t sn, uint8_t *addr, uint16_t port)
 {
     CHECK_SOCKNUM();
     CHECK_SOCKMODE(Sn_MR_TCP);
     CHECK_SOCKINIT();
-    //M20140501 : For avoiding fatal error on memory align mismatched
-    //if( *((uint32_t*)addr) == 0xFFFFFFFF || *((uint32_t*)addr) == 0) return SOCKERR_IPINVALID;
     {
         uint32_t taddr;
         taddr = ((uint32_t) addr[0] & 0x000000FF);
@@ -159,8 +164,6 @@ int8_t connect(uint8_t sn, uint8_t *addr, uint16_t port)
             return SOCKERR_IPINVALID;
         }
     }
-    //
-
     if (port == 0) {
         return SOCKERR_PORTZERO;
     }
@@ -190,6 +193,7 @@ int8_t connect(uint8_t sn, uint8_t *addr, uint16_t port)
     return SOCK_OK;
 }
 
+/* API function, disconnect socket */
 int8_t disconnect(uint8_t sn)
 {
     CHECK_SOCKNUM();
@@ -210,8 +214,8 @@ int8_t disconnect(uint8_t sn)
     return SOCK_OK;
 }
 
+/* API function to send data */
 int32_t send(uint8_t sn, const void *buf, uint16_t len)
-// int32_t send(uint8_t sn, uint8_t * buf, uint16_t len)
 {
     uint8_t tmp = 0;
     uint16_t freesize = 0;
@@ -271,7 +275,7 @@ int32_t send(uint8_t sn, const void *buf, uint16_t len)
     return len;
 }
 
-// int32_t recv(uint8_t sn, uint8_t * buf, uint16_t len)
+/* API function to receive data */
 int32_t recv(uint8_t sn, void *buf, uint16_t len)
 {
     uint8_t tmp = 0;
@@ -293,11 +297,11 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
                     break;
                 } else if (getSn_TX_FSR(sn) == getSn_TxMAX(sn)) {
                     close(sn);
-                    return 0; // ordrrly shutdown Ben Goed says so
+                    return 0; /* fix: This is not an ERROR, this is normal shutdown*/
                 }
             } else {
                 close(sn);
-                return -1; // Ben says WTF: SOCKERR_SOCKSTATUS;
+                return -1; /* on error return -1 not -7 WTF: SOCKERR_SOCKSTATUS */
             }
         }
         if ((sock_io_mode & (1 << sn)) && (recvsize == 0)) {
@@ -311,15 +315,14 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
         len = recvsize;
     }
     wiz_recv_data(sn, buf, len);
-    setSn_CR(sn, Sn_CR_RECV); // set control op receive
+    setSn_CR(sn, Sn_CR_RECV); // set control to receive
     while (getSn_CR(sn)) {
         /* nop nop*/
-    } ; // wacht tot bit leeg is
+    } ; /* wait until the bit clears */
     return len;
 }
 
-int32_t sendto(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr,
-               uint16_t port)
+int32_t sendto(uint8_t sn, const uint8_t *buf, uint16_t len, const uint8_t *addr, uint16_t port)
 {
     uint8_t tmp = 0;
     uint16_t freesize = 0;
@@ -388,13 +391,12 @@ int32_t sendto(uint8_t sn, uint8_t *buf, uint16_t len, uint8_t *addr,
             setSn_IR(sn, Sn_IR_SENDOK);
             break;
         }
-        //M:20131104
-        //else if(tmp & Sn_IR_TIMEOUT) return SOCKERR_TIMEOUT;
+
         else if (tmp & Sn_IR_TIMEOUT) {
             setSn_IR(sn, Sn_IR_TIMEOUT);
             return SOCKERR_TIMEOUT;
         }
-        ////////////
+
     }
     return len;
 }

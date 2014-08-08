@@ -507,7 +507,7 @@
 	"stm32f4xx_wwdg.h"
 	"stm32f4xx_rcc.h"
 
-1406975229 source:\\vboxsvr\emblock2\newproject1\src\main.c
+1407491642 source:\\vboxsvr\emblock2\newproject1\src\main.c
 	"stm32f4xx_conf.h"
 	"FreeRTOS.h"
 	"task.h"
@@ -528,6 +528,7 @@
 	"my_helpers.h"
 	"term_io.h"
 	"vs10xx.h"
+	"ringbuffer.h"
 
 1402145828 source:\\vboxsvr\emblock2\newproject1\src\startup_stm32f4xx.s
 
@@ -692,7 +693,7 @@
 1383948106 \\vboxsvr\emblock2\newproject1\spl\inc\stm32f4xx_sai.h
 	"stm32f4xx.h"
 
-1406632347 source:\\vboxsvr\emblock2\newproject1\src\term_io.c
+1407276783 source:\\vboxsvr\emblock2\newproject1\src\term_io.c
 	<stdarg.h>
 	"term_io.h"
 
@@ -702,18 +703,18 @@
 
 1406653937 \\vboxsvr\emblock2\newproject1\inc\comm.h
 
-1406653972 source:\\vboxsvr\emblock2\newproject1\src\comm.c
+1407060026 source:\\vboxsvr\emblock2\newproject1\src\comm.c
 	"stm32f4xx.h"
 	"comm.h"
 
 1403116991 \\vboxsvr\emblock2\newproject1\inc\my_queue.h
 
-1406883664 source:\\vboxsvr\emblock2\newproject1\src\lcdshield.c
+1407060067 source:\\vboxsvr\emblock2\newproject1\src\lcdshield.c
 	"LCDshield.h"
 	"FreeRTOS.h"
 	"task.h"
 
-1403435689 \\vboxsvr\emblock2\newproject1\inc\lcdshield.h
+1407060004 \\vboxsvr\emblock2\newproject1\inc\lcdshield.h
 	<inttypes.h>
 	<stdlib.h>
 	"stm32f4xx_conf.h"
@@ -728,13 +729,13 @@
 	<stdlib.h>
 	"stm32f4xx_conf.h"
 
-1406753431 source:\\vboxsvr\emblock2\newproject1\src\socket.c
+1407488882 source:\\vboxsvr\emblock2\newproject1\src\socket.c
 	"socket.h"
 
-1404769998 \\vboxsvr\emblock2\newproject1\inc\socket.h
+1407488912 \\vboxsvr\emblock2\newproject1\inc\socket.h
 	"wizchip_conf.h"
 
-1404768953 \\vboxsvr\emblock2\newproject1\inc\wizchip_conf.h
+1407003631 \\vboxsvr\emblock2\newproject1\inc\wizchip_conf.h
 	<stdint.h>
 	"W5200/w5200.h"
 	"w5500.h"
@@ -743,10 +744,10 @@
 	<stdint.h>
 	"wizchip_conf.h"
 
-1406579969 source:\\vboxsvr\emblock2\newproject1\src\w5500.c
+1407060661 source:\\vboxsvr\emblock2\newproject1\src\w5500.c
 	"w5500.h"
 
-1406811610 source:\\vboxsvr\emblock2\newproject1\src\wizchip_conf.c
+1407003766 source:\\vboxsvr\emblock2\newproject1\src\wizchip_conf.c
 	<stddef.h>
 	"wizchip_conf.h"
 
@@ -762,35 +763,36 @@
 1406824381 source:\\vboxsvr\emblock2\newproject1\src\my_helpers.c
 	"my_helpers.h"
 
-1406644917 source:\\vboxsvr\emblock2\newproject1\src\dns.c
+1407489011 source:\\vboxsvr\emblock2\newproject1\src\dns.c
 	<string.h>
 	<stdlib.h>
 	"socket.h"
 	"dns.h"
 
-1406644724 \\vboxsvr\emblock2\newproject1\inc\dns.h
+1407489032 \\vboxsvr\emblock2\newproject1\inc\dns.h
 	<stdint.h>
 
-1406824402 source:\\vboxsvr\emblock2\newproject1\src\dhcp.c
+1407063380 source:\\vboxsvr\emblock2\newproject1\src\dhcp.c
 	"socket.h"
 	"dhcp.h"
 	<stdio.h>
 
 1406582895 \\vboxsvr\emblock2\newproject1\inc\dhcp.h
 
-1406652806 source:\\vboxsvr\emblock2\newproject1\src\spliturl.c
+1407062537 source:\\vboxsvr\emblock2\newproject1\src\spliturl.c
 	"FreeRTOS.h"
 	"task.h"
 	<string.h>
 	<stdlib.h>
 	<limits.h>
+	"term_io.h"
 	"spliturl.h"
 	<stdio.h>
 
 1406652638 \\vboxsvr\emblock2\newproject1\inc\spliturl.h
 	<stdint.h>
 
-1406973800 source:\\vboxsvr\emblock2\newproject1\src\vs10xx.c
+1407492624 source:\\vboxsvr\emblock2\newproject1\src\vs10xx.c
 	<inttypes.h>
 	"FreeRTOS.h"
 	"task.h"
@@ -810,10 +812,10 @@
 1398348498 \\vboxsvr\emblock2\newproject1\freertos\inc\semphr.h
 	"queue.h"
 
-1406829261 \\vboxsvr\emblock2\newproject1\inc\vs10xx.h
+1407491581 \\vboxsvr\emblock2\newproject1\inc\vs10xx.h
 	"menu.h"
 
-1406819670 \\vboxsvr\emblock2\newproject1\inc\menu.h
+1407064915 \\vboxsvr\emblock2\newproject1\inc\menu.h
 	"FreeRTOS.h"
 	"task.h"
 	"semphr.h"
@@ -824,4 +826,12 @@
 	<inttypes.h>
 
 1406828652 \\vboxsvr\emblock2\newproject1\inc\data_blobs.h
+
+1407490818 source:\\vboxsvr\emblock2\newproject1\src\ringbuffer.c
+	"ringbuffer.h"
+	"FreeRTOS.h"
+	<string.h>
+
+1407078777 \\vboxsvr\emblock2\newproject1\inc\ringbuffer.h
+	<sys/types.h>
 

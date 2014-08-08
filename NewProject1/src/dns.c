@@ -386,7 +386,7 @@ int8_t parseDNSMSG(struct dhdr *pdhdr, uint8_t *pbuf, uint8_t *ip_from_dns)
  *               len  - is the MAX. size of buffer.
  * Returns     : the length of the DNS message. // mod Edwin
  */
-int16_t dns_makequery(uint16_t op, char *name, uint8_t *buf, uint16_t len)
+int16_t dns_makequery(uint16_t op, const char *name, uint8_t *buf, uint16_t len)
 {
     uint8_t *cp;
     char *cp1;
@@ -476,7 +476,7 @@ void DNS_init(uint8_t socket, uint8_t *buf, uint16_t request_id)
 }
 
 /* DNS CLIENT RUN */
-int8_t DNS_run(uint8_t *dns_ip, uint8_t *name, uint8_t *ip_from_dns)
+int8_t DNS_run(const uint8_t *dns_ip, const char *name, uint8_t *ip_from_dns)
 {
     int8_t ret; // return value : 0==succes, -1 == parse error, -4 == DNS server error, -2 == timeout
     struct dhdr dhp;

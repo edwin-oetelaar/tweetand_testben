@@ -109,6 +109,7 @@ typedef enum {
 
 typedef struct PLAYER_CONTEXT {
     devicemode_t devicemode; // 0=player 1=RX ice 2=TX mp3 3=TX-serial
+    uint8_t use_line_input; /* use line input for recording set this to 1, if 0 use MIC input*/
     uint8_t encoding_preset; // 0=mp3/24000Hz/16kbps/mono
     uint8_t state; // current state http parser
     uint8_t nextstate; // moore machine

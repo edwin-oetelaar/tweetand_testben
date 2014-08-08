@@ -1,4 +1,5 @@
-/* Modified by Edwin van den Oetelaar, for efficiency */
+/* Modified by .., for efficiency */
+/* added some comments */
 
 #include "w5500.h"
 
@@ -100,8 +101,9 @@ void     WIZCHIP_READ_BUF (uint32_t AddrSel, uint8_t* pBuf, uint16_t len)
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x00FF0000) >> 16);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x0000FF00) >>  8);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x000000FF) >>  0);
-    for(i = 0; i < len; i++,j)
+    for(i = 0; i < len; i++,j) {
         pBuf[i] = WIZCHIP.IF.SPI._read_byte();
+    }
 #elif( _WIZCHIP_IO_MODE_ == _WIZCHIP_IO_MODE_SPI_FDM_ )
     AddrSel |= (_W5500_SPI_READ_ | _W5500_SPI_FDM_OP_LEN4_);
     for(i = 0; i < len/4; i++, j) {
@@ -163,7 +165,7 @@ void     WIZCHIP_READ_BUF (uint32_t AddrSel, uint8_t* pBuf, uint16_t len)
 void     WIZCHIP_WRITE_BUF(uint32_t AddrSel, const uint8_t* pBuf, uint16_t len)
 {
     uint16_t i = 0;
-   // uint16_t j = 0;
+    // uint16_t j = 0;
     WIZCHIP_CRITICAL_ENTER();
     WIZCHIP.CS._select();
 
@@ -174,8 +176,9 @@ void     WIZCHIP_WRITE_BUF(uint32_t AddrSel, const uint8_t* pBuf, uint16_t len)
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x00FF0000) >> 16);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x0000FF00) >>  8);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x000000FF) >>  0);
-    for(i = 0; i < len; i++)
+    for(i = 0; i < len; i++) {
         WIZCHIP.IF.SPI._write_byte(pBuf[i]);
+    }
 
     // WIZCHIP.IF._write_buffer(pBuf,len);
 
@@ -267,11 +270,14 @@ uint16_t getSn_RX_RSR(uint8_t sn)
     return val;
 }
 
+/* put (len) bytes of data inside the send buffer (*wizdata) of the chip for socket (sn) */
 void wiz_send_data(uint8_t sn, const uint8_t *wizdata, uint16_t len)
 {
     uint16_t ptr = 0;
     uint32_t addrsel = 0;
-    if(len == 0)  return;
+    if(len == 0) {
+        return;
+    }
     ptr = getSn_TX_WR(sn);
 
     addrsel = ((uint32_t)ptr << 8) + (WIZCHIP_TXBUF_BLOCK(sn) << 3);
@@ -282,12 +288,18 @@ void wiz_send_data(uint8_t sn, const uint8_t *wizdata, uint16_t len)
     setSn_TX_WR(sn,ptr);
 }
 
+/* Receive bytes from chip : use socket (sn) to receive (len) data bytes into callers buffer (*wizdata)
+ * pre: make sure (len) bytes are really inside the chip using getSn_RX_RSR(sn)
+ * post: data is in the buffer
+ */
 void wiz_recv_data(uint8_t sn, uint8_t *wizdata, uint16_t len)
 {
     uint16_t ptr = 0;
     uint32_t addrsel = 0;
 
-    if(len == 0) return;
+    if(len == 0) {
+        return;
+    }
     ptr = getSn_RX_RD(sn);
 
     addrsel = ((uint32_t)ptr << 8) + (WIZCHIP_RXBUF_BLOCK(sn) << 3);
@@ -298,7 +310,7 @@ void wiz_recv_data(uint8_t sn, uint8_t *wizdata, uint16_t len)
     setSn_RX_RD(sn,ptr);
 }
 
-
+/* read data from the chip buffer, ignoring it, see wiz_recv_data() */
 void wiz_recv_ignore(uint8_t sn, uint16_t len)
 {
     uint16_t ptr = 0;
@@ -307,3 +319,4 @@ void wiz_recv_ignore(uint8_t sn, uint16_t len)
     setSn_RX_RD(sn,ptr);
 }
 
+/* end of file */

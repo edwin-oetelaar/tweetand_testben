@@ -137,7 +137,7 @@
  *
  * @param sn Socket number. It should be <b>0 ~ @ref \_WIZCHIP_SOCK_NUM_</b>.
  * @param protocol Protocol type to operate such as TCP, UDP and MACRAW.
- * @param port Port number to be bined.
+ * @param port Port number to be bound.
  * @param flag Socket flags as \ref SF_ETHER_OWN, \ref SF_IGMP_VER2, \ref SF_TCP_NODELAY, \ref SF_MULTI_ENABLE, \ref SF_IO_NONBLOCK and so on.\n
  *             Valid flags only in W5500 : @ref SF_BROAD_BLOCK, @ref SF_MULTI_BLOCK, @ref SF_IPv6_BLOCK, and @ref SF_UNI_BLOCK.
  * @sa Sn_MR
@@ -283,7 +283,7 @@ int32_t recv(uint8_t sn, void * buf, uint16_t len);
  *                        @ref SOCKERR_TIMEOUT     - Timeout occurred \n
  *                        @ref SOCK_BUSY           - Socket is busy.
  */
-int32_t sendto(uint8_t sn, uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t port);
+int32_t sendto(uint8_t sn, const uint8_t * buf, uint16_t len, const uint8_t * addr, uint16_t port);
 
 /**
  * @ingroup WIZnet_socket_APIs

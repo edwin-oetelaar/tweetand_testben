@@ -17,7 +17,6 @@
 #include "stm32f4xx_dma.h"
 #include "stm32f4xx_spi.h"
 #include "stm32f4xx_exti.h"
-// #include "timebase.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -26,15 +25,17 @@
 #include "task.h"
 //#include "semphr.h"
 #define _VSDEBUG_ 1
-#include "data_blobs.h"
+#include "data_blobs.h" // plugin and samples
+
+extern const unsigned short plugin[]; /* zit nu in data_blobs.c */
+extern xSemaphoreHandle xSemaphoreSPI2;
+extern xSemaphoreHandle xSemaphoreWRAM;
 
 /* User application code loading tables for VS10xx */
-extern const unsigned short plugin[]; /* zit nu in data_blobs.c */
-
 void LoadUserCode(void)
 {
     size_t i = 0;
-    while (i < PLUGIN_SIZE /* sizeof(plugin) / sizeof(plugin[0]) */ ) {
+    while (i < PLUGIN_SIZE) {
         unsigned short addr, n, val;
         addr = plugin[i++];
         n = plugin[i++];
@@ -43,25 +44,20 @@ void LoadUserCode(void)
             val = plugin[i++];
             while (n--) {
                 VS_Write_SCI(addr, val);
-                //   WriteVS10xxRegister(addr, val);
             }
         } else { /* Copy run, copy n samples */
             while (n--) {
                 val = plugin[i++];
-                //  WriteVS10xxRegister(addr, val);
                 VS_Write_SCI(addr, val);
             }
         }
     }
+    /* check that DREQ shows the chip is ready to work, timeout 100ms */
     if (VS_Dreq_Wait(100)) {
-        printf("could not load plugin");
+        xprintf("could not load plugin\r\n");
     }
 }
 
-extern xSemaphoreHandle xSemaphoreSPI2;
-//extern xSemaphoreHandle xSemaphoreDMA1;
-//extern xSemaphoreHandle xSemaphoreDREQ;
-extern xSemaphoreHandle xSemaphoreWRAM;
 
 /* LEES application note AN2548
  * Je kan niet zomaar channels en DMA kanalen kiezen
@@ -213,7 +209,7 @@ void VS_GPIO_Init(void)
 }
 #endif
 
-void VLSI_SPI_GPIO_Init(void)
+void VS_SPI_GPIO_init(void)
 {
     // ok check op 31/7/2014
     // de VS1063 zit op SPI 2
@@ -291,7 +287,7 @@ void VLSI_SPI_GPIO_Init(void)
 
 #if 0
 
-void VS_SPI2_Init(uint8_t slow)
+void VS_SPI_init_hardware(uint8_t slow)
 {
     // setup up SPI2 hardware, slow or fast
     // pre: the global xSemaphoreSPI2 must be created
@@ -335,9 +331,7 @@ void VS_SPI2_Init(uint8_t slow)
 
 void VS_Registers_Init(void)
 {
-    //xprintf("Y\n");
     VS_Soft_Reset(DEFAULT_DIVIDER);
-    //xprintf("Y2\n");
     // mode should be  0x4c20
     uint16_t regval = SM_SDINEW | // use SPI protocol
                       SM_TESTS | // enable tests via SDI
@@ -345,18 +339,14 @@ void VS_Registers_Init(void)
                       //  SM_LINE1   // use line input instead of mic */
                       SM_SDISHARE; // share xCS with xDCS
 
-    // do a dummy read, from example code..
+    // do a dummy read, make sure xCS etc are defined from example code..
     VS_Read_SCI(SCI_MODE); //
     // write regiser
     VS_Write_SCI(SCI_MODE, regval);
-    //xprintf("Y3\n");
-    // read register back
-    //uint16_t value = VS_Read_SCI(SCI_MODE);
     // set sane volume
-    VS_Volume_Set(0x4040);// some value
+    VS_Volume_Set(0x0202);// some value
     VS_Write_SCI(SCI_BASS, 0x00);
 
-    //xprintf("VS reg init\n");
 }
 
 void VS_Volume_Set(uint16_t vol)
@@ -505,15 +495,28 @@ uint8_t VS_Hard_Reset(void)
     return rv;
 }
 
-void VS_Write_SCI(uint8_t reg, uint16_t zzdata)
+// write single byte into data stream of VS chip
+// when not writing registers (SCI) the control lines are in SDI mode by default
+void VS_Write_SDI(uint8_t b)
+{
+    if (xSemaphoreTake(xSemaphoreSPI2,5000)) {
+        //    GPIO_SetBits(VS_xCS_PRT, VS_xCS); // note, this is inverse of write Sci
+        VS_SPI_SendByte(b);
+        xSemaphoreGive(xSemaphoreSPI2);
+    } else {
+        xprintf("err sema spi2 wr sdi\n");
+    }
+}
+/* write a single word to a (control) register inside the VS chip */
+void VS_Write_SCI(uint8_t reg, uint16_t w_data)
 {
     // grab VS_xCS
     if (xSemaphoreTake(xSemaphoreSPI2,5000)) {
         GPIO_ResetBits(VS_xCS_PRT, VS_xCS);
-        SPI2_SendByte(VS_WRITE_COMMAND);
-        SPI2_SendByte(reg);
-        SPI2_SendByte((zzdata >> 8) & 0xff);
-        SPI2_SendByte(zzdata & 0xff);
+        VS_SPI_SendByte(VS_WRITE_COMMAND);
+        VS_SPI_SendByte(reg);
+        VS_SPI_SendByte((w_data >> 8) & 0xff);
+        VS_SPI_SendByte(w_data & 0xff);
         // release VS_xCS
         GPIO_SetBits(VS_xCS_PRT, VS_xCS);
         xSemaphoreGive(xSemaphoreSPI2);
@@ -538,13 +541,13 @@ uint16_t VS_Read_SCI(uint8_t reg)
         // grab VS_xCS
         GPIO_ResetBits(VS_xCS_PRT, VS_xCS);
         // send read command
-        SPI2_SendByte(VS_READ_COMMAND);
+        VS_SPI_SendByte(VS_READ_COMMAND);
         // send register index
-        SPI2_SendByte(reg);
+        VS_SPI_SendByte(reg);
         // read first byte MSB
-        uint16_t data = SPI2_SendByte(0x00) << 8;
+        uint16_t data = VS_SPI_SendByte(0x00) << 8;
         // second is LSB
-        data |= SPI2_SendByte(0x00);
+        data |= VS_SPI_SendByte(0x00);
         // release VS_xCS
         GPIO_SetBits(VS_xCS_PRT, VS_xCS);
         xSemaphoreGive(xSemaphoreSPI2);
@@ -556,75 +559,95 @@ uint16_t VS_Read_SCI(uint8_t reg)
 }
 
 
+/*
+  Read 16-bit value from memory address.
+*/
+uint16_t VS_Read_Mem(uint16_t addr)
+{
+    uint32_t rv = 0xFFFF;
+    if (xSemaphoreTake(xSemaphoreWRAM,100)) { // GRAB
+        VS_Write_SCI(SCI_WRAMADDR, addr);
+        rv = VS_Read_SCI(SCI_WRAM);
+        xSemaphoreGive(xSemaphoreWRAM); // RELEASE
+    } else {
+        xprintf("sema err WRAM rm");
+    }
+    return rv;
+}
 
 /*
   Read 32-bit increasing counter value from addr.
   Because the 32-bit value can change while reading it,
   read MSB's twice and decide which is the correct one.
 */
-uint32_t ReadVS10xxMem32Counter(uint16_t addr)
+uint32_t VS_Read_mem32_counter(uint16_t addr)
 {
     uint16_t msbV1, lsb, msbV2;
-    uint32_t res;
-
-    VS_Write_SCI(SCI_WRAMADDR, addr+1);
-    msbV1 = VS_Read_SCI(SCI_WRAM);
-    VS_Write_SCI(SCI_WRAMADDR, addr);
-    lsb = VS_Read_SCI(SCI_WRAM);
-    msbV2 = VS_Read_SCI(SCI_WRAM);
-    if (lsb < 0x8000U) {
-        msbV1 = msbV2;
+    uint32_t res= 0xFFFF;
+    if (xSemaphoreTake(xSemaphoreWRAM,100)) { // GRAB
+        VS_Write_SCI(SCI_WRAMADDR, addr+1);
+        msbV1 = VS_Read_SCI(SCI_WRAM);
+        VS_Write_SCI(SCI_WRAMADDR, addr);
+        lsb = VS_Read_SCI(SCI_WRAM);
+        msbV2 = VS_Read_SCI(SCI_WRAM);
+        xSemaphoreGive(xSemaphoreWRAM); // RELEASE
+        if (lsb < 0x8000U) {
+            msbV1 = msbV2;
+        }
+        res = ((uint32_t)msbV1 << 16) | lsb;
+    } else {
+        xprintf("sema err WRAM rm32cntr");
     }
-    res = ((uint32_t)msbV1 << 16) | lsb;
     return res;
 }
 
 /*
  Read 32-bit non-changing value from addr under mutex protection
 */
-uint32_t ReadVS10xxMem32(uint16_t addr)
+uint32_t VS_Read_mem32(uint16_t addr)
 {
     uint16_t lsb;
     uint32_t rv = 0xFFFF;
-    if (xSemaphoreTake(xSemaphoreWRAM,100)) {
+    if (xSemaphoreTake(xSemaphoreWRAM,100)) { // GRAB
         VS_Write_SCI(SCI_WRAMADDR, addr);
         lsb = VS_Read_SCI(SCI_WRAM);
         rv = lsb | ((uint32_t)VS_Read_SCI(SCI_WRAM) << 16);
-        xSemaphoreGive(xSemaphoreWRAM);
+        xSemaphoreGive(xSemaphoreWRAM); // RELEASE
     } else {
         xprintf("sema err WRAM rm32");
     }
     return rv;
 }
 
-/*
-  Read 16-bit value from addr.
-*/
-uint16_t ReadVS10xxMem(uint16_t addr)
-{
 
-    VS_Write_SCI(SCI_WRAMADDR, addr);
-    return VS_Read_SCI(SCI_WRAM);
+/*
+  Write 16-bit value to given VS10xx memory address
+*/
+void VS_Write_mem(uint16_t addr, uint16_t data)
+{
+    if (xSemaphoreTake(xSemaphoreWRAM,100)) { // GRAB
+        VS_Write_SCI(SCI_WRAMADDR, addr);
+        VS_Write_SCI(SCI_WRAM, data);
+        xSemaphoreGive(xSemaphoreWRAM); // RELEASE
+    } else {
+        xprintf("sema err WRAM wr");
+    }
 }
 
 /*
-  Write 16-bit value to given VS10xx address
-*/
-void WriteVS10xxMem(uint16_t addr, uint16_t data)
-{
-    VS_Write_SCI(SCI_WRAMADDR, addr);
-    VS_Write_SCI(SCI_WRAM, data);
-}
-
-/*
-  Write 32-bit value to given VS10xx address
+  Write 32-bit value to given VS10xx memory address
 */
 
-void WriteVS10xxMem32(uint16_t addr, uint32_t data)
+void VS_Write_mem32(uint16_t addr, uint32_t data)
 {
-    VS_Write_SCI(SCI_WRAMADDR, addr);
-    VS_Write_SCI(SCI_WRAM, (uint16_t)data);
-    VS_Write_SCI(SCI_WRAM, (uint16_t)(data>>16));
+    if (xSemaphoreTake(xSemaphoreWRAM,100)) { // GRAB
+        VS_Write_SCI(SCI_WRAMADDR, addr);
+        VS_Write_SCI(SCI_WRAM, (uint16_t)data);
+        VS_Write_SCI(SCI_WRAM, (uint16_t)(data>>16));
+        xSemaphoreGive(xSemaphoreWRAM); // RELEASE
+    } else {
+        xprintf("sema err WRAM wr32");
+    }
 }
 
 /* */
@@ -640,16 +663,16 @@ void VS_Test_Sine(uint8_t onoff, uint8_t freq)
         if (xSemaphoreTake(xSemaphoreSPI2,5000)) {
             GPIO_SetBits(VS_xCS_PRT, VS_xCS); // select CS
             if (onoff) {
-                SPI2_SendByte(0x53);
-                SPI2_SendByte(0xEF);
-                SPI2_SendByte(0x6E);
-                SPI2_SendByte(freq);
+                VS_SPI_SendByte(0x53);
+                VS_SPI_SendByte(0xEF);
+                VS_SPI_SendByte(0x6E);
+                VS_SPI_SendByte(freq);
                 SPI2_SendZeroBytes(0x10); // fill with 4 zero bytes
             } else {
-                SPI2_SendByte(0x45);
-                SPI2_SendByte(0x78);
-                SPI2_SendByte(0x69);
-                SPI2_SendByte(0x74);
+                VS_SPI_SendByte(0x45);
+                VS_SPI_SendByte(0x78);
+                VS_SPI_SendByte(0x69);
+                VS_SPI_SendByte(0x74);
                 SPI2_SendZeroBytes(0x09);
             }
             GPIO_ResetBits(VS_xCS_PRT, VS_xCS); // De- select CS // MOET DIT ECHT Edwin?
@@ -667,10 +690,14 @@ void VS_Test_Sine(uint8_t onoff, uint8_t freq)
 void SPI2_SendZeroBytes(uint8_t count)
 {
     while (count) {
-        SPI2_SendByte(0x00);
+        VS_SPI_SendByte(0x00);
         count--;
     }
 }
+
+/*
+
+*/
 
 uint8_t VS_SDI_Write_Buffer(const uint8_t *ptr, uint16_t len)
 {
@@ -683,16 +710,9 @@ uint8_t VS_SDI_Write_Buffer(const uint8_t *ptr, uint16_t len)
         // xprintf("\r\nsdiFree=%u audioFill=%u ",sdiFree,audioFill);
         uint8_t b = GPIO_ReadInputDataBit(VS_DREQ_PRT, VS_DREQ);
         if (b) {
-
-            if (xSemaphoreTake(xSemaphoreWRAM,100)) {
-                VS_Write_SCI(SCI_WRAMADDR, 0xc0df);
-                sdiFree = VS_Read_SCI(SCI_WRAM);
-                xSemaphoreGive(xSemaphoreWRAM);
-                //xprintf("sdi Free %d\n", sdiFree);
-            } else {
-                //
-                xprintf("Err Sema xSemaphoreWRAM in VS SDI wr Buf\n");
-            }
+            /* Read sdiFree register */
+            sdiFree = VS_Read_Mem(0xc0df); // set page 67 of datasheet ref 10.11.2
+            sdiFree <<= 1; // multiply to get byte count
             atonce = (sdiFree < len) ? sdiFree : len;
             if (atonce) {
                 if (xSemaphoreTake(xSemaphoreSPI2,1000)) {
@@ -734,16 +754,9 @@ uint8_t VS_SDI_JAS_Buffer(const uint8_t *ptr, uint16_t len)
         // xprintf("\r\nsdiFree=%u audioFill=%u ",sdiFree,audioFill);
         uint8_t b = GPIO_ReadInputDataBit(VS_DREQ_PRT, VS_DREQ);
         if (b) {
-
-            if (xSemaphoreTake(xSemaphoreWRAM,100)) {
-                VS_Write_SCI(SCI_WRAMADDR, 0xc0df);
-                sdiFree = VS_Read_SCI(SCI_WRAM);
-                xSemaphoreGive(xSemaphoreWRAM);
-                //xprintf("sdi Free %d\n", sdiFree);
-            } else {
-                //
-                xprintf("Err Sema xSemaphoreWRAM in VS SDI wr Buf\n");
-            }
+            /* read number of free WORDS in VS chip */
+            sdiFree = VS_Read_Mem(0xc0df); // see page 67 of datasheet ref 10.11.2, reads 0x1E1F etc
+            sdiFree <<= 1; // multiply to get byte count
             atonce = (sdiFree < len) ? sdiFree : len;
             if (atonce) {
                 if (xSemaphoreTake(xSemaphoreSPI2,1000)) {
@@ -751,13 +764,8 @@ uint8_t VS_SDI_JAS_Buffer(const uint8_t *ptr, uint16_t len)
 
                     int i;
                     for (i=0; i<atonce; i++) {
-                        SPI2_SendByte(*(ptr+i));
-
+                        VS_SPI_SendByte(*(ptr+i));
                     }
-
-                    // DMA_MemToSPI2(ptr, atonce);
-                    // xprintf("b\n");
-
 
                     ptr += atonce;
                     len -= atonce;
@@ -839,7 +847,7 @@ void VS_Registers_Dump(void)
     //	vPortFree(p);
 }
 
-uint8_t SPI2_SendByte(uint8_t const byte)
+uint8_t VS_SPI_SendByte(uint8_t const byte)
 {
     // send a byte to SPI2
     // pre: xSemaphoreSPI2 is taken
@@ -857,7 +865,7 @@ uint8_t SPI2_SendByte(uint8_t const byte)
     }
     /* get value from register */
     uint16_t tmp = SPI_I2S_ReceiveData(SPI2);
-    //	xprintf("\nGot %d", tmp);
+
     return (uint8_t) tmp;
 }
 
@@ -876,76 +884,6 @@ uint8_t SPI2_SendByte(uint8_t const byte)
  * 11025 Hz   11070 Hz  +0.41 % Not recommended for streaming applications.
  *  8000 Hz    8000
  */
-
-/* SCI_RECQUALITY bits for VS1063 */
-
-#define RQ_MODE_B                   14
-#define RQ_MULT_B                   12
-#define RQ_OGG_PAR_SERIAL_NUMBER_B  11
-#define RQ_OGG_LIMIT_FRAME_LENGTH_B 10
-#define RQ_MP3_NO_BIT_RESERVOIR_B   10
-#define RQ_BITRATE_BASE_B            0
-
-#define RQ_MODE                   (1<<14)
-#define RQ_MULT                   (1<<12)
-#define RQ_OGG_PAR_SERIAL_NUMBER  (1<<11)
-#define RQ_OGG_LIMIT_FRAME_LENGTH (1<<10)
-#define RQ_MP3_NO_BIT_RESERVOIR   (1<<10)
-#define RQ_BITRATE_BASE           (1<< 0)
-
-#define RQ_MODE_BITS 2
-#define RQ_MODE_MASK 0xc000
-#define RQ_MULT_BITS 2
-#define RQ_MULT_MASK 0x3000
-#define RQ_BITRATE_BASE_BITS 9
-#define RQ_BITRATE_BASE_MASK 0x01ff
-
-#define RQ_MODE_QUALITY 0x0000
-#define RQ_MODE_VBR     0x4000
-#define RQ_MODE_ABR     0x8000
-#define RQ_MODE_CBR     0xc000
-
-#define RQ_MULT_10      0x0000
-#define RQ_MULT_100     0x1000
-#define RQ_MULT_1000    0x2000
-#define RQ_MULT_10000   0x3000
-
-/* SCI_RECMODE bits for VS1063 */
-
-#define RM_63_CODEC_B    15
-#define RM_63_AEC_B      14
-#define RM_63_UART_TX_B  13
-#define RM_63_PAUSE_B    11
-#define RM_63_NO_RIFF_B  10
-#define RM_63_FORMAT_B    4
-#define RM_63_ADC_MODE_B  0
-
-#define RM_63_CODEC    (1<<15) /* bidirectional mode */
-#define RM_63_AEC      (1<<14) /* echo canceling enable */
-#define RM_63_UART_TX  (1<<13)
-#define RM_63_PAUSE    (1<<11)
-#define RM_63_NO_RIFF  (1<<10)
-#define RM_63_FORMAT   (1<< 4)
-#define RM_63_ADC_MODE (1<< 0)
-
-#define RM_63_FORMAT_BITS       4
-#define RM_63_FORMAT_MASK  0x00f0
-#define RM_63_ADCMODE_BITS      3
-#define RM_63_ADCMODE_MASK 0x0007
-
-#define RM_63_FORMAT_IMA_ADPCM  0x0000
-#define RM_63_FORMAT_PCM        0x0010
-#define RM_63_FORMAT_G711_ULAW  0x0020
-#define RM_63_FORMAT_G711_ALAW  0x0030
-#define RM_63_FORMAT_G722_ADPCM 0x0040
-#define RM_63_FORMAT_OGG_VORBIS 0x0050
-#define RM_63_FORMAT_MP3        0x0060
-
-#define RM_63_ADC_MODE_JOINT_AGC_STEREO 0x0000
-#define RM_63_ADC_MODE_DUAL_AGC_STEREO  0x0001
-#define RM_63_ADC_MODE_LEFT             0x0002
-#define RM_63_ADC_MODE_RIGHT            0x0003
-#define RM_63_ADC_MODE_MONO             0x0004
 
 static const enc_preset_t enc_presets[] = { {
         .samplerate= 24000U, /*samplerate 24000*/
@@ -970,7 +908,7 @@ static const enc_preset_t enc_presets[] = { {
 };
 
 #if 0
-
+/* not used, */
 unsigned char VScomm_get(void)
 {
     while (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == RESET) {
@@ -1025,12 +963,12 @@ uint8_t VS_Encoder_Init(radio_player_t *rp)
     LoadUserCode(); // just be sure the plugin is loaded
     // wait a little while for DREQ
 //     WriteVS10xxMem32(PAR_ENC_SERIAL_NUMBER, 0x87654321 ); /* write RANDOM number info register for OGG serial number, optional */
-    VS_Write_SCI(SCI_AICTRL0, myp->samplerate); //sample rate
-    vTaskDelay(1);
-    VS_Write_SCI(SCI_AICTRL1, myp->rec_volume); // AGC on
-    vTaskDelay(1);
-    VS_Write_SCI(SCI_AICTRL2, myp->max_agc_gain); // AGC max gain /1000
-    vTaskDelay(1);
+    VS_Write_SCI(SCI_RECRATE, myp->samplerate); //sample rate
+    // vTaskDelay(1);
+    VS_Write_SCI(SCI_RECGAIN, myp->rec_volume); // AGC on
+    // vTaskDelay(1);
+    VS_Write_SCI( SCI_RECMAXAUTO, myp->max_agc_gain); // AGC max gain /1000
+//   vTaskDelay(1);
 
     /* we doen de uart test */
     // zet de uart speed van de VS1063 op 460800
@@ -1039,87 +977,48 @@ uint8_t VS_Encoder_Init(radio_player_t *rp)
     // D1 is high nibble (12 = 0x0C)
     // D2 is low nibble (9 = 0x09)
     //
-    VS_Write_SCI(SCI_WRAMADDR, /* 0xC02B */0x1E2A);
-    xprintf("0x1E2A=%x\n", VS_Read_SCI(SCI_WRAM));
+    //  VS_Write_SCI(SCI_WRAMADDR, /* 0xC02B */0x1E2A);
+    //  xprintf("0x1E2A=%x\n", VS_Read_SCI(SCI_WRAM));
     // prints 0x1E2A=420A
-    VS_Write_SCI(SCI_WRAMADDR, /* 0xC02B */0x1E2A);
+////    VS_Write_SCI(SCI_WRAMADDR, /* 0xC02B */0x1E2A);
 //	VS_Write_SCI(SCI_WRAM, 0x090C); // deler =120 55.296/120=460800
 //	VS_Write_SCI(SCI_WRAM, 0x00);
 //	VS_Write_SCI(SCI_WRAM, 0x00);
     // alternative way to set baud rate
-    VS_Write_SCI(SCI_WRAM, 0x00);
-    VS_Write_SCI(SCI_WRAM, 46081U);
-    VS_Write_SCI(SCI_WRAM, 0x0000U);
+////    VS_Write_SCI(SCI_WRAM, 0x00);
+////    VS_Write_SCI(SCI_WRAM, 11360U << 1); // 11520 << 2;
+////    VS_Write_SCI(SCI_WRAM, 0x0000U);
+
+    VS_Write_mem(PAR_ENC_TX_UART_DIV,0); /* do not use manual dividers for VS uart */
+    VS_Write_mem(PAR_ENC_TX_UART_BYTE_SPEED,11360U << 1); /* use this Byte speed to calculate internal speed */
+    VS_Write_mem(PAR_ENC_TX_PAUSE_GPIO,0); /* disable all flow control using IO pins of VS chip */
 
     // Disable all interrupts except SCI
     // Write1053Sci(SCI_WRAMADDR, VS1053_INT_ENABLE);
     // Write1053Sci(SCI_WRAM, 0x2);
 
-
-// ERUIT we gaan niet via SERIAL
-//    VScomm_init();
-
-    if (rp->devicemode==DevMode_TX_Ice_Serial) { // DIT WERKT NIET EDWIN TODO
-        VS_Write_SCI(SCI_AICTRL3, myp->rec_format | ENC_UART_TX_ENABLE  ); // mp3 mono
+    if (rp->devicemode==DevMode_TX_Ice_Serial) {
+        VS_Write_SCI(SCI_RECMODE, myp->rec_format | ENC_UART_TX_ENABLE  );
     } else {
-        VS_Write_SCI(SCI_AICTRL3, myp->rec_format   ); // mp3 mono
+        VS_Write_SCI(SCI_RECMODE, myp->rec_format);
     }
-    vTaskDelay(1);
+   vTaskDelay(1);
     // VS_Write_SCI(SCI_WRAMADDR, ENC_BR_MODE_VBR | ENC_BITR_1000| 128U); // bitratemode|multiplier|bitrate
-    VS_Write_SCI(SCI_WRAMADDR, myp->mode_bitrate); // bitratemode|multiplier|bitrate
+    VS_Write_SCI(SCI_RECQUALITY, myp->mode_bitrate); // bitratemode|multiplier|bitrate
 
-    vTaskDelay(1);
-    // VS_Registers_Dump();
-
+      vTaskDelay(1);
     uint16_t m = VS_Read_SCI(SCI_MODE);
     vTaskDelay(1);
-    m |= SM_ENCODE /* | SM_LINE1 */;
+    m |= SM_ENCODE;
+    if (rp->use_line_input) {
+        m |= SM_LINE1;
+    }
     vTaskDelay(1);
     VS_Write_SCI(SCI_MODE, m); // set encode mode
     vTaskDelay(1);
     xprintf("encode :mode write is %4x\n", m);
     vTaskDelay(1);
-    VS_Write_SCI(SCI_AIADDR, 0x50); // go
-
-    if (rp->devicemode==DevMode_TX_Ice_Serial) {
-        //    int i = 100;
-        //    while (i--) {
-        //       //    xprintf("%x\n", VScomm_get());
-        //   }
-    }
-
-//    if (rp->devicemode==DevMode_TX_Ice) {
-//        int i = 100;
-//        int n;
-//        while (i--) {
-//            // xprintf("%x\n", VScomm_get());
-//            /* See if there is some data available */
-//            if ((n = VS_Read_SCI(SCI_RECWORDS)) > 0) {
-//                int i;
-//                uint8_t *rbp = recBuf;
-//                n = min(n, REC_BUFFER_SIZE/2);
-//                for (i=0; i<n; i++) {
-//                    uint16_t w = VS_Read_SCI(SCI_RECDATA);
-//                    *rbp++ = (uint8_t)(w >> 8);
-//                    *rbp++ = (uint8_t)(w & 0xFF);
-//                }
-//                fwrite(recBuf, 1, 2*n, writeFp);
-//                fileSize += 2*n;
-//            } else {
-//                /* The following read from SCI_RECWORDS may appear redundant.
-//                   But it's not: SCI_RECWORDS needs to be rechecked AFTER we
-//                  have seen that SM_CANCEL have cleared. */
-//                if (playerState != psPlayback && !(VS_Read_SCI(SCI_MODE) & SM_CANCEL)
-//                        && !VS_Read_SCI(SCI_RECWORDS)) {
-//                    playerState = psStopped;
-//                }
-//            }
-//        }
-//    }
-
-    /* */
-
-    //	VS_Registers_Dump();
+    VS_Write_SCI(SCI_AIADDR, 0x50); // go start encoding now
 
     return rv;
 }

@@ -61,14 +61,14 @@ int xatoi (char **str, long *res)
 
 void xputc (char c)
 {
-    if (c == '\n') comm_put('\r');
+    // if (c == '\n') comm_put('\r');
     comm_put(c);
 }
 
 
 
 
-void xputs (const char* str)
+void xputs (const char *str)
 {
     while (*str)
         xputc(*str++);
@@ -113,7 +113,7 @@ void xitoa (long val, int radix, int len)
     while (i);
 }
 
-void xprintf (const char* str, ...)
+void xprintf (const char *str, ...)
 {
     va_list arp;
     int d, r, w, s, l;
@@ -143,7 +143,7 @@ void xprintf (const char* str, ...)
         }
         if (!d) break;
         if (d == 's') {
-            xputs(va_arg(arp, char*));
+            xputs(va_arg(arp, char *));
             continue;
         }
         if (d == 'c') {
@@ -217,7 +217,7 @@ void get_line (char *buff, int len)
 
 
 // function added by mthomas:
-int get_line_r (char *buff, int len, int* idx)
+int get_line_r (char *buff, int len, int *idx)
 {
     char c;
     int retval = 0;

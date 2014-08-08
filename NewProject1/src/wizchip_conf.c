@@ -1,5 +1,5 @@
 //****************************************************************************/
-//!
+//! Modified for Wiznet challenge project see mercurial logs
 //! \file wizchip_conf.c
 //! \brief WIZCHIP Config Header File.
 //! \version 1.0.1
@@ -78,8 +78,6 @@ void 	wizchip_cs_deselect(void)          {};
  * @note This function help not to access wrong address. If you do not describe this function or register any functions,
  * null function is called.
  */
-//M20140501 : Explict pointer type casting
-//uint8_t wizchip_bus_readbyte(uint32_t AddrSel) { return * ((volatile uint8_t *) AddrSel); };
 uint8_t wizchip_bus_readbyte(uint32_t AddrSel)
 {
     return * ((volatile uint8_t *)((ptrdiff_t) AddrSel));
@@ -89,9 +87,6 @@ uint8_t wizchip_bus_readbyte(uint32_t AddrSel)
  * @note This function help not to access wrong address. If you do not describe this function or register any functions,
  * null function is called.
  */
-
-//M20140501 : Explict pointer type casting
-//void 	wizchip_bus_writebyte(uint32_t AddrSel, uint8_t wb)  { *((volatile uint8_t*) AddrSel) = wb; };
 void 	wizchip_bus_writebyte(uint32_t AddrSel, uint8_t wb)
 {
     *((volatile uint8_t*)((ptrdiff_t)AddrSel)) = wb;
@@ -111,7 +106,10 @@ uint8_t wizchip_spi_readbyte(void)
  * @note This function help not to access wrong address. If you do not describe this function or register any functions,
  * null function is called.
  */
-void 	wizchip_spi_writebyte(uint8_t wb) {};
+uint8_t 	wizchip_spi_writebyte(uint8_t wb)
+{
+    return 0;
+};
 
 /**
  * @\ref _WIZCHIP instance
@@ -132,6 +130,9 @@ _WIZCHIP  WIZCHIP = {
 static uint8_t    _DNS_[4];      // DNS server ip address
 static dhcp_mode  _DHCP_;        // DHCP mode
 
+
+/* register callback function of CRITICAL SECTION to acces wiznet chip,
+use interrupt disable or mutex to prevent simultanious access to chip */
 void reg_wizchip_cris_cbfunc(void(*cris_en)(void), void(*cris_ex)(void))
 {
     if(!cris_en || !cris_ex) {
@@ -143,6 +144,7 @@ void reg_wizchip_cris_cbfunc(void(*cris_en)(void), void(*cris_ex)(void))
     }
 }
 
+/* register callback functions for CHIP SELECT of wiznet chip */
 void reg_wizchip_cs_cbfunc(void(*cs_sel)(void), void(*cs_desel)(void))
 {
     if(!cs_sel || !cs_desel) {
@@ -153,8 +155,8 @@ void reg_wizchip_cs_cbfunc(void(*cs_sel)(void), void(*cs_desel)(void))
         WIZCHIP.CS._deselect = cs_desel;
     }
 }
-
-void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint32_t addr, uint8_t wb))
+/* register callback functions for BUS connected wiznet chip, not used in this project */
+void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint32_t addr, uint8_t wb) )
 {
     while(!(WIZCHIP.if_mode & _WIZCHIP_IO_MODE_BUS_));
 
@@ -167,8 +169,8 @@ void reg_wizchip_bus_cbfunc(uint8_t(*bus_rb)(uint32_t addr), void (*bus_wb)(uint
     }
 }
 
-void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), void (*spi_wb)(uint8_t wb)
-                            /* ,void (*spi_write_buffer)(uint8_t *pb, uint16_t len)*/ )
+/* register callback functions for SPI */
+void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), uint8_t (*spi_wb)(uint8_t wb) )
 {
     while(!(WIZCHIP.if_mode & _WIZCHIP_IO_MODE_SPI_));
 
@@ -178,10 +180,11 @@ void reg_wizchip_spi_cbfunc(uint8_t (*spi_rb)(void), void (*spi_wb)(uint8_t wb)
     } else {
         WIZCHIP.IF.SPI._read_byte   = spi_rb;
         WIZCHIP.IF.SPI._write_byte  = spi_wb;
-       // WIZCHIP.IF.SPI._write_buffer  = spi_write_buffer;
+        // WIZCHIP.IF.SPI._write_buffer  = spi_write_buffer;
     }
 }
 
+/* sort of IOCTL function for wiznet chip */
 int8_t ctlwizchip(ctlwizchip_type cwtype, void* arg)
 {
     uint8_t tmp = 0;
@@ -241,12 +244,16 @@ int8_t ctlwizchip(ctlwizchip_type cwtype, void* arg)
 #endif
     case CW_GET_PHYPOWMODE:
         tmp = wizphy_getphypmode();
-        if((int8_t)tmp == -1) return -1;
+        if((int8_t)tmp == -1) {
+            return -1;
+        }
         *(uint8_t*)arg = tmp;
         break;
     case CW_GET_PHYLINK:
         tmp = wizphy_getphylink();
-        if((int8_t)tmp == -1) return -1;
+        if((int8_t)tmp == -1) {
+            return -1;
+        }
         *(uint8_t*)arg = tmp;
         break;
     default:
@@ -255,7 +262,7 @@ int8_t ctlwizchip(ctlwizchip_type cwtype, void* arg)
     return 0;
 }
 
-
+/* sort of IOCTL function for wiznet chip */
 int8_t ctlnetwork(ctlnetwork_type cntype, void* arg)
 {
 
@@ -309,19 +316,27 @@ int8_t wizchip_init(uint8_t* txsize, uint8_t* rxsize)
     wizchip_sw_reset();
     if(txsize) {
         tmp = 0;
-        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++)
+        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++) {
             tmp += txsize[i];
-        if(tmp > 16) return -1;
-        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++)
+        }
+        if(tmp > 16) {
+            return -1;
+        }
+        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++) {
             setSn_TXBUF_SIZE(i, txsize[i]);
+        }
     }
     if(rxsize) {
         tmp = 0;
-        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++)
+        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++) {
             tmp += rxsize[i];
-        if(tmp > 16) return -1;
-        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++)
+        }
+        if(tmp > 16) {
+            return -1;
+        }
+        for(i = 0 ; i < _WIZCHIP_SOCK_NUM_; i++) {
             setSn_RXBUF_SIZE(i, rxsize[i]);
+        }
     }
     return 0;
 }
@@ -426,15 +441,17 @@ int8_t wizphy_getphylink(void)
 {
     int8_t tmp;
 #if   _WIZCHIP_ == 5200
-    if(getPHYSTATUS() & PHYSTATUS_LINK)
+    if(getPHYSTATUS() & PHYSTATUS_LINK) {
         tmp = PHY_LINK_ON;
-    else
+    } else {
         tmp = PHY_LINK_OFF;
+    }
 #elif _WIZCHIP_ == 5500
-    if(getPHYCFGR() & PHYCFGR_LNK_ON)
+    if(getPHYCFGR() & PHYCFGR_LNK_ON) {
         tmp = PHY_LINK_ON;
-    else
+    } else {
         tmp = PHY_LINK_OFF;
+    }
 #else
     tmp = -1;
 #endif
@@ -447,15 +464,17 @@ int8_t wizphy_getphypmode(void)
 {
     int8_t tmp = 0;
 #if   _WIZCHIP_ == 5200
-    if(getPHYSTATUS() & PHYSTATUS_POWERDOWN)
+    if(getPHYSTATUS() & PHYSTATUS_POWERDOWN) {
         tmp = PHY_POWER_DOWN;
-    else
+    } else {
         tmp = PHY_POWER_NORM;
+    }
 #elif _WIZCHIP_ == 5500
-    if(getPHYCFGR() & PHYCFGR_OPMDC_PDOWN)
+    if(getPHYCFGR() & PHYCFGR_OPMDC_PDOWN) {
         tmp = PHY_POWER_DOWN;
-    else
+    } else {
         tmp = PHY_POWER_NORM;
+    }
 #else
     tmp = -1;
 #endif
@@ -477,23 +496,26 @@ void wizphy_reset(void)
 void wizphy_setphyconf(wiz_PhyConf* phyconf)
 {
     uint8_t tmp = 0;
-    if(phyconf->by == PHY_CONFBY_SW)
+    if(phyconf->by == PHY_CONFBY_SW) {
         tmp |= PHYCFGR_OPMD;
-    else
+    } else {
         tmp &= ~PHYCFGR_OPMD;
-    if(phyconf->mode == PHY_MODE_AUTONEGO)
+    }
+    if(phyconf->mode == PHY_MODE_AUTONEGO) {
         tmp |= PHYCFGR_OPMDC_ALLA;
-    else {
+    } else {
         if(phyconf->duplex == PHY_DUPLEX_FULL) {
-            if(phyconf->speed == PHY_SPEED_100)
+            if(phyconf->speed == PHY_SPEED_100) {
                 tmp |= PHYCFGR_OPMDC_100F;
-            else
+            } else {
                 tmp |= PHYCFGR_OPMDC_10F;
+            }
         } else {
-            if(phyconf->speed == PHY_SPEED_100)
+            if(phyconf->speed == PHY_SPEED_100) {
                 tmp |= PHYCFGR_OPMDC_100H;
-            else
+            } else {
                 tmp |= PHYCFGR_OPMDC_10H;
+            }
         }
     }
     setPHYCFGR(tmp);
@@ -547,19 +569,26 @@ int8_t wizphy_setphypmode(uint8_t pmode)
 {
     uint8_t tmp = 0;
     tmp = getPHYCFGR();
-    if((tmp & PHYCFGR_OPMD)== 0) return -1;
+    if((tmp & PHYCFGR_OPMD)== 0) {
+        return -1;
+    }
     tmp &= ~PHYCFGR_OPMDC_ALLA;
-    if( pmode == PHY_POWER_DOWN)
+    if( pmode == PHY_POWER_DOWN) {
         tmp |= PHYCFGR_OPMDC_PDOWN;
-    else
+    } else {
         tmp |= PHYCFGR_OPMDC_ALLA;
+    }
     setPHYCFGR(tmp);
     wizphy_reset();
     tmp = getPHYCFGR();
     if( pmode == PHY_POWER_DOWN) {
-        if(tmp & PHYCFGR_OPMDC_PDOWN) return 0;
+        if(tmp & PHYCFGR_OPMDC_PDOWN) {
+            return 0;
+        }
     } else {
-        if(tmp & PHYCFGR_OPMDC_ALLA) return 0;
+        if(tmp & PHYCFGR_OPMDC_ALLA) {
+            return 0;
+        }
     }
     return -1;
 }
@@ -596,9 +625,13 @@ int8_t wizchip_setnetmode(netmode_type netmode)
 {
     uint8_t tmp = 0;
 #if _WIZCHIP_ != 5500
-    if(netmode & ~(NM_WAKEONLAN | NM_PPPOE | NM_PINGBLOCK)) return -1;
+    if(netmode & ~(NM_WAKEONLAN | NM_PPPOE | NM_PINGBLOCK)) {
+        return -1;
+    }
 #else
-    if(netmode & ~(NM_WAKEONLAN | NM_PPPOE | NM_PINGBLOCK | NM_FORCEARP)) return -1;
+    if(netmode & ~(NM_WAKEONLAN | NM_PPPOE | NM_PINGBLOCK | NM_FORCEARP)) {
+        return -1;
+    }
 #endif
     tmp = getMR();
     tmp |= (uint8_t)netmode;

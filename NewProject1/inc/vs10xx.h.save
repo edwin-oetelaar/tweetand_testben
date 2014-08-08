@@ -1,17 +1,13 @@
 /*
- * vs10xx.h
- *
- *  Created on: Sep 12, 2011
- *      Author: oetelaar
  * re-hacked op 29/7/2014 ivm wiznet challenge
  */
 
 #ifndef VS10XX_H_
 #define VS10XX_H_
 
-/* new : hardware configuratie van de VS1063 ook hier
- * dit moet de enige plek zijn waar mapping van pinnen en poorten zit
- * eens kijken of dat werkt ...
+/* 
+ * hardware mapping for VS1063 IO : change for your hardware
+ * todo : check this is the only place !
  */
 
 #define ON	(1)
@@ -20,29 +16,28 @@
 #define HIGH	(1)
 #define LOW		(0)
 /**/
-#define VS_xRESET       GPIO_Pin_4 /* ok */
+#define VS_xRESET       GPIO_Pin_4 /* PC4 ok */
 #define VS_xRESET_PRT   GPIOC  /* ok */
 /**/
-#define VS_xCS			GPIO_Pin_12 /* ok */
+#define VS_xCS			GPIO_Pin_12 /* PB12 ok */
 #define VS_xCS_PRT		GPIOB /* ok */
 /**/
-#define VS_DREQ			GPIO_Pin_6	//
-#define VS_DREQ_PRT     GPIOB
+#define VS_DREQ			GPIO_Pin_5	/* PC5 ok */
+#define VS_DREQ_PRT     GPIOC /* ok*/
 /**/
-#define VS_SCLK			GPIO_Pin_13
-#define VS_SCLK_PRT     GPIOB
+#define VS_SCLK			GPIO_Pin_13 /* PB13 ok */
+#define VS_SCLK_PRT     GPIOB /* ok */
 /**/
-#define VS_MISO			GPIO_Pin_14
-#define VS_MISO_PRT     GPIOB
+#define VS_MISO			GPIO_Pin_14 /* PB14 ok */
+#define VS_MISO_PRT     GPIOB /* ok */
 /**/
-#define VS_MOSI			GPIO_Pin_15
-#define VS_MOSI_PRT     GPIOB
+#define VS_MOSI			GPIO_Pin_15 /* PB15 ok*/
+#define VS_MOSI_PRT     GPIOB /* ok */
 
-/* ===  eind van de hardware config === */
+/* end of hardware config */
 
-// #include "app_config.h"
 #include "menu.h"
-#define DEFAULT_DIVIDER 0xC000 /* 0x9800 */
+#define DEFAULT_DIVIDER 0xE000 /* 9.8.4 SCI_CLOCKF (RW) 0xe000 is max intern 61MHz */
 
 typedef struct {
     uint8_t profile; /* 1=voice 2=voice-high-mono 3=voice-wide-stereo 4=hifi-voice-mono 5=music-stereo */
@@ -114,16 +109,6 @@ static const ogg_bitrate_t oggbitrates[] = { //
     { 5, 10, 48, 333 }
 };
 
-/* outputs */
-//#define VS_MOSI		P1_0 /**< OUTP microproc output slave input */
-//#define VS_SCLK 	P1_1 /**< OUTP spi clock */
-//#define VS_xCS  	P1_2 /**< OUTP not Chip Select */
-//#define VS_xBSYNC 	P1_3 /**< OUTP not Chip Select Registers */
-//#define VS_xRESET 	P1_4 /**< OUTP not Reset */
-
-/* inputs */
-//#define VS_MISO		P1_5 /**< INP microproc input slave output */
-//#define VS_DREQ		P1_6 /**< INP Dreq, slave can handle more data */
 
 /** VS10xx SCI Write Command byte is 0x02 */
 #define VS_WRITE_COMMAND 0x02
@@ -141,6 +126,21 @@ static const ogg_bitrate_t oggbitrates[] = { //
 #define SCI_WRAMADDR	0x07   /**< VS10xx register */
 #define SCI_HDAT0		0x08   /**< VS10xx register */
 #define SCI_HDAT1		0x09   /**< VS10xx register */
+
+
+/* SCI register recording aliases */
+
+#define SCI_RECQUALITY 0x07 /* (WRAMADDR) VS1063 */
+#define SCI_RECDATA    0x08 /* (HDAT0)    VS1063 */
+#define SCI_RECWORDS   0x09 /* (HDAT1)    VS1063 */
+#define SCI_RECRATE    0x0C /* (AICTRL0)  VS1063, VS1053 */
+#define SCI_RECDIV     0x0C /* (AICTRL0)  VS1033, VS1003 */
+#define SCI_RECGAIN    0x0D /* (AICTRL1)  VS1063, VS1053, VS1033, VS1003 */
+#define SCI_RECMAXAUTO 0x0E /* (AICTRL2)  VS1063, VS1053, VS1033 */
+#define SCI_RECMODE    0x0F /* (AICTRL3)  VS1063, VS1053 */
+
+
+
 #define SCI_AIADDR		0x0a   /**< VS10xx register */
 #define SCI_VOL			0x0b   /**< VS10xx register */
 #define SCI_AICTRL0		0x0c   /**< VS10xx register */
@@ -219,6 +219,166 @@ static const ogg_bitrate_t oggbitrates[] = { //
 #define AAC_UPSAMPLE_ACTIVE 	2
 #define AAC_PS_PRESENT 			4
 #define AAC_PS_ACTIVE 			8
+
+
+/* VS1063 / VS1053 Parametric */
+#define PAR_CHIP_ID                  0x1e00 /* VS1063, VS1053, 32 bits */
+#define PAR_VERSION                  0x1e02 /* VS1063, VS1053 */
+#define PAR_CONFIG1                  0x1e03 /* VS1063, VS1053 */
+#define PAR_PLAY_SPEED               0x1e04 /* VS1063, VS1053 */
+#define PAR_BITRATE_PER_100          0x1e05 /* VS1063 */
+#define PAR_BYTERATE                 0x1e05 /* VS1053 */
+#define PAR_END_FILL_BYTE            0x1e06 /* VS1063, VS1053 */
+#define PAR_RATE_TUNE                0x1e07 /* VS1063,         32 bits */
+#define PAR_PLAY_MODE                0x1e09 /* VS1063 */
+#define PAR_SAMPLE_COUNTER           0x1e0a /* VS1063,         32 bits */
+#define PAR_VU_METER                 0x1e0c /* VS1063 */
+#define PAR_AD_MIXER_GAIN            0x1e0d /* VS1063 */
+#define PAR_AD_MIXER_CONFIG          0x1e0e /* VS1063 */
+#define PAR_PCM_MIXER_RATE           0x1e0f /* VS1063 */
+#define PAR_PCM_MIXER_FREE           0x1e10 /* VS1063 */
+#define PAR_PCM_MIXER_VOL            0x1e11 /* VS1063 */
+#define PAR_EQ5_DUMMY                0x1e12 /* VS1063 */
+#define PAR_EQ5_LEVEL1               0x1e13 /* VS1063 */
+#define PAR_EQ5_FREQ1                0x1e14 /* VS1063 */
+#define PAR_EQ5_LEVEL2               0x1e15 /* VS1063 */
+#define PAR_EQ5_FREQ2                0x1e16 /* VS1063 */
+#define PAR_JUMP_POINTS              0x1e16 /*         VS1053 */
+#define PAR_EQ5_LEVEL3               0x1e17 /* VS1063 */
+#define PAR_EQ5_FREQ3                0x1e18 /* VS1063 */
+#define PAR_EQ5_LEVEL4               0x1e19 /* VS1063 */
+#define PAR_EQ5_FREQ4                0x1e1a /* VS1063 */
+#define PAR_EQ5_LEVEL5               0x1e1b /* VS1063 */
+#define PAR_EQ5_UPDATED              0x1e1c /* VS1063 */
+#define PAR_SPEED_SHIFTER            0x1e1d /* VS1063 */
+#define PAR_EARSPEAKER_LEVEL         0x1e1e /* VS1063 */
+#define PAR_SDI_FREE                 0x1e1f /* VS1063 */
+#define PAR_AUDIO_FILL               0x1e20 /* VS1063 */
+#define PAR_RESERVED0                0x1e21 /* VS1063 */
+#define PAR_RESERVED1                0x1e22 /* VS1063 */
+#define PAR_RESERVED2                0x1e23 /* VS1063 */
+#define PAR_RESERVED3                0x1e24 /* VS1063 */
+#define PAR_LATEST_SOF               0x1e25 /* VS1063,         32 bits */
+#define PAR_LATEST_JUMP              0x1e26 /*         VS1053 */
+#define PAR_POSITION_MSEC            0x1e27 /* VS1063, VS1053, 32 bits */
+#define PAR_RESYNC                   0x1e29 /* VS1063, VS1053 */
+
+/* The following addresses are shared between modes. */
+/* Generic pointer */
+#define PAR_GENERIC                  0x1e2a /* VS1063, VS1053 */
+
+/* Encoder mode */
+#define PAR_ENC_TX_UART_DIV          0x1e2a /* VS1063 */
+#define PAR_ENC_TX_UART_BYTE_SPEED   0x1e2b /* VS1063 */
+#define PAR_ENC_TX_PAUSE_GPIO        0x1e2c /* VS1063 */
+#define PAR_ENC_AEC_ADAPT_MULTIPLIER 0x1e2d /* VS1063 */
+#define PAR_ENC_RESERVED             0x1e2e /* VS1063 */
+#define PAR_ENC_CHANNEL_MAX          0x1e3c /* VS1063 */
+#define PAR_ENC_SERIAL_NUMBER        0x1e3e /* VS1063 */
+
+/* Decoding WMA */
+#define PAR_WMA_CUR_PACKET_SIZE      0x1e2a /* VS1063, VS1053, 32 bits */
+#define PAR_WMA_PACKET_SIZE          0x1e2c /* VS1063, VS1053, 32 bits */
+
+/* Decoding AAC */
+#define PAR_AAC_SCE_FOUND_MASK       0x1e2a /* VS1063, VS1053 */
+#define PAR_AAC_CPE_FOUND_MASK       0x1e2b /* VS1063, VS1053 */
+#define PAR_AAC_LFE_FOUND_MASK       0x1e2c /* VS1063, VS1053 */
+#define PAR_AAC_PLAY_SELECT          0x1e2d /* VS1063, VS1053 */
+#define PAR_AAC_DYN_COMPRESS         0x1e2e /* VS1063, VS1053 */
+#define PAR_AAC_DYN_BOOST            0x1e2f /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS    0x1e30 /* VS1063, VS1053 */
+#define PAR_AAC_SBR_PS_FLAGS         0x1e31 /* VS1063 */
+
+
+/* Decoding MIDI (VS1053) */
+#define PAR_MIDI_BYTES_LEFT          0x1e2a /*         VS1053, 32 bits */
+
+/* Decoding Vorbis */
+#define PAR_VORBIS_GAIN 0x1e2a       0x1e30 /* VS1063, VS1053 */
+
+
+/* Bit definitions for parametric registers with bitfields */
+#define PAR_CONFIG1_DIS_WMA_B     15 /* VS1063 */
+#define PAR_CONFIG1_DIS_AAC_B     14 /* VS1063 */
+#define PAR_CONFIG1_DIS_MP3_B     13 /* VS1063 */
+#define PAR_CONFIG1_DIS_FLAC_B    12 /* VS1063 */
+#define PAR_CONFIG1_DIS_CRC_B      8 /* VS1063 */
+#define PAR_CONFIG1_AAC_PS_B       6 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_B      4 /* VS1063, VS1053 */
+#define PAR_CONFIG1_MIDI_REVERB_B  0 /*         VS1053 */
+
+#define PAR_CONFIG1_DIS_WMA     (1<<15) /* VS1063 */
+#define PAR_CONFIG1_DIS_AAC     (1<<14) /* VS1063 */
+#define PAR_CONFIG1_DIS_MP3     (1<<13) /* VS1063 */
+#define PAR_CONFIG1_DIS_FLAC    (1<<12) /* VS1063 */
+#define PAR_CONFIG1_DIS_CRC     (1<< 8) /* VS1063 */
+#define PAR_CONFIG1_AAC_PS      (1<< 6) /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR     (1<< 4) /* VS1063, VS1053 */
+#define PAR_CONFIG1_MIDI_REVERB (1<< 0) /*         VS1053 */
+
+#define PAR_CONFIG1_AAC_PS_BITS  2      /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_PS_MASK  0x00c0 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_BITS 2      /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_MASK 0x0030 /* VS1063, VS1053 */
+
+#define PAR_CONFIG1_AAC_SBR_ALWAYS_UPSAMPLE    0x0000 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_SELECTIVE_UPSAMPLE 0x0010 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_NEVER_UPSAMPLE     0x0020 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_SBR_DISABLE            0x0030 /* VS1063, VS1053 */
+
+#define PAR_CONFIG1_AAC_PS_NORMAL              0x0000 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_PS_DOWNSAMPLED         0x0040 /* VS1063, VS1053 */
+#define PAR_CONFIG1_AAC_PS_DISABLE             0x00c0 /* VS1063, VS1053 */
+
+#define PAR_PLAY_MODE_SPEED_SHIFTER_ENA_B 6 /* VS1063 */
+#define PAR_PLAY_MODE_EQ5_ENA_B           5 /* VS1063 */
+#define PAR_PLAY_MODE_PCM_MIXER_ENA_B     4 /* VS1063 */
+#define PAR_PLAY_MODE_AD_MIXER_ENA_B      3 /* VS1063 */
+#define PAR_PLAY_MODE_VU_METER_ENA_B      2 /* VS1063 */
+#define PAR_PLAY_MODE_PAUSE_ENA_B         1 /* VS1063 */
+#define PAR_PLAY_MODE_MONO_ENA_B          0 /* VS1063 */
+
+#define PAR_PLAY_MODE_SPEED_SHIFTER_ENA (1<<6) /* VS1063 */
+#define PAR_PLAY_MODE_EQ5_ENA           (1<<5) /* VS1063 */
+#define PAR_PLAY_MODE_PCM_MIXER_ENA     (1<<4) /* VS1063 */
+#define PAR_PLAY_MODE_AD_MIXER_ENA      (1<<3) /* VS1063 */
+#define PAR_PLAY_MODE_VU_METER_ENA      (1<<2) /* VS1063 */
+#define PAR_PLAY_MODE_PAUSE_ENA         (1<<1) /* VS1063 */
+#define PAR_PLAY_MODE_MONO_ENA          (1<<0) /* VS1063 */
+
+#define PAR_VU_METER_LEFT_BITS  8      /* VS1063 */
+#define PAR_VU_METER_LEFT_MASK  0xFF00 /* VS1063 */
+#define PAR_VU_METER_RIGHT_BITS 8      /* VS1063 */
+#define PAR_VU_METER_RIGHT_MASK 0x00FF /* VS1063 */
+
+#define PAR_AD_MIXER_CONFIG_MODE_B 2 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_B 2 /* VS1063 */
+
+#define PAR_AD_MIXER_CONFIG_MODE_BITS 2      /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_MODE_MASK 0x000c /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_BITS 2      /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_MASK 0x0003 /* VS1063 */
+
+#define PAR_AD_MIXER_CONFIG_RATE_192K 0x0000 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_96K  0x0001 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_48K  0x0002 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_RATE_24K  0x0003 /* VS1063 */
+
+#define PAR_AD_MIXER_CONFIG_MODE_STEREO 0x0000 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_MODE_MONO   0x0040 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_MODE_LEFT   0x0080 /* VS1063 */
+#define PAR_AD_MIXER_CONFIG_MODE_RIGHT  0x00c0 /* VS1063 */
+
+#define PAR_AAC_SBR_AND_PS_STATUS_SBR_PRESENT_B       0 /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_UPSAMPLING_ACTIVE_B 1 /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_PS_PRESENT_B        2 /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_PS_ACTIVE_B         3 /* VS1063, VS1053 */
+
+#define PAR_AAC_SBR_AND_PS_STATUS_SBR_PRESENT       (1<<0) /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_UPSAMPLING_ACTIVE (1<<1) /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_PS_PRESENT        (1<<2) /* VS1063, VS1053 */
+#define PAR_AAC_SBR_AND_PS_STATUS_PS_ACTIVE         (1<<3) /* VS1063, VS1053 */
 
 /*
  The following parametric structure is in X memory at address 0x1e00 and can be used to set
@@ -316,57 +476,33 @@ typedef struct {
     } i;
 } VS1063_parametric;
 
-#if 0
-struct parametric {
-    /* configs are not cleared between files */
-    uint32_t chipID; /*1e00/01 Initialized at reset for your convenience */
-    uint16_t version; /*1e02 - structure version */
-    uint16_t config1; /*1e03 ---- ---- ppss RRRR PS mode, SBR mode, Reverb */
-    uint16_t playSpeed; /*1e04 0,1 = normal speed, 2 = twice, 3 = three times etc. */
-    uint16_t byteRate; /*1e05 average byterate */
-    uint16_t endFillByte; /*1e06 byte value to send after file sent */
-    uint16_t reserved[16]; /*1e07..15 file byte offsets */
-    uint32_t jumpPoints[8]; /*1e16..25 file byte offsets */
-    uint16_t latestJump; /*1e26 index to lastly updated jumpPoint */
-    uint32_t positionMsec; /*1e27-28 play position, if known (WMA, Ogg Vorbis) */
-    int16 resync; /*1e29 > 0 for automatic m4a, ADIF, WMA resyncs */
-    union {
-        struct {
-            uint32_t curPacketSize;
-            uint32_t packetSize;
-        } wma;
-        struct {
-            uint16_t sceFoundMask; /*1e2a SCEs found since last clear */
-            uint16_t cpeFoundMask; /*1e2b CPEs found since last clear */
-            uint16_t lfeFoundMask; /*1e2c LFEs found since last clear */
-            uint16_t playSelect; /*1e2d 0 = first any, initialized at aac init */
-            int16 dynCompress; /*1e2e -8192=1.0, initialized at aac init */
-            int16 dynBoost; /*1e2f 8192=1.0, initialized at aac init */
-            uint16_t sbrAndPsStatus; /*0x1e30 1=SBR, 2=upsample, 4=PS, 8=PS active */
-        } aac;
-        struct {
-            uint32_t bytesLeft;
-        } midi;
-        struct {
-            int16 gain; /* 0x1e2a proposed gain offset in 0.5dB steps, default = -12 */
-        } vorbis;
-    } i;
-};
-#endif
+//void VS_GPIO_Init(void); // init the chip hardware
+void VS_SPI_GPIO_init(void); // init spi en gpio van de m4 chip
 
-void VS_GPIO_Init(void); // init the chip hardware
-void VS_SPI2_Init(uint8_t slow); // init the spi hardware port
+void VS_SPI_init_hardware(uint8_t slow); // init the spi hardware port
 uint8_t VS_Hard_Reset(void); // reset chip, can timeout
 uint8_t VS_Soft_Reset(uint16_t clockregister); // soft reset
 void VS_Registers_Init(void);//
 void VS_Volume_Set(uint16_t vol);
 uint16_t VS_Read_SCI(uint8_t reg); // read a register in vs10xx chip
+
 void VS_Write_SCI(uint8_t reg, uint16_t val); // write register inside vs10xx chip
+void VS_Write_SDI(uint8_t b); // write single byte into data stream of VS chip
 void VS_Registers_Dump(void); // test internal check vs10xx all register dump to screen
-uint8_t SPI2_SendByte(uint8_t const byte); // tijdelijke fix
+uint8_t VS_SPI_SendByte(uint8_t const byte); // tijdelijke fix
 uint8_t VS_Dreq_Wait(uint32_t timeout); // timeout in ms
 void SPI2_SendZeroBytes(uint8_t count); // send count 0x00 bytes to spi port 2
 uint8_t VS_SDI_Write_Buffer(const uint8_t *buf, uint16_t len);
+uint8_t VS_SDI_JAS_Buffer(const uint8_t *ptr, uint16_t len); // zonder DMA data erin jassen Ben Goed oplossing
 void VS_Test_Sine(uint8_t onoff, uint8_t freq); // sine on/off 0x65 as freq works
 uint8_t VS_Encoder_Init(radio_player_t *rp);
+/* Read 16-bit value from addr under mutex protection */
+uint16_t VS_Read_Mem(uint16_t addr);
+/* Read 32-bit non-changing value from addr under mutex protection */
+uint32_t VS_Read_mem32(uint16_t addr);
+/* Write 16-bit value to given VS10xx address under mutex protection */
+void VS_Write_mem(uint16_t addr, uint16_t data);
+/* Write 32-bit value to given VS10xx address under mutex protection */
+void VS_Write_mem32(uint16_t addr, uint32_t data);
+
 #endif /* VS10XX_H_ */

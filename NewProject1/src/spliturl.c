@@ -1,9 +1,9 @@
-/* split url functies
- * nodig voor radio/blindenradio
+/*
+ * split url functions
+ * needed for streaming radio
+ * modified for NADA project Circuit cellar / Wiznet 2014
+ * made by name removed, GPL license
  */
-/* made by Edwin van den Oetelaar */
-
-// #include "wiztypes.h"
 
 /* Scheduler includes */
 #include "FreeRTOS.h"
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "term_io.h" /* for xprintf */
 #include "spliturl.h"
 
 #define DEBUG 1

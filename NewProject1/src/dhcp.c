@@ -488,7 +488,7 @@ int8_t parseDHCPMSG(void)
     uint16_t len;
     uint8_t *p;
     uint8_t *e;
-    uint8_t type;
+    uint8_t type = 0; /* needs init, could return undefined value */
     uint8_t opt_len;
 
     if((len = getSn_RX_RSR(DHCP_SOCKET)) > 0) {
@@ -504,6 +504,7 @@ int8_t parseDHCPMSG(void)
         if ( (pDHCPMSG->chaddr[0] != DHCP_CHADDR[0]) || (pDHCPMSG->chaddr[1] != DHCP_CHADDR[1]) ||
                 (pDHCPMSG->chaddr[2] != DHCP_CHADDR[2]) || (pDHCPMSG->chaddr[3] != DHCP_CHADDR[3]) ||
                 (pDHCPMSG->chaddr[4] != DHCP_CHADDR[4]) || (pDHCPMSG->chaddr[5] != DHCP_CHADDR[5])   ) {
+            /* Mac Adresses do NOT match */
             return 0;
         }
         type = 0;
@@ -556,9 +557,6 @@ int8_t parseDHCPMSG(void)
                 dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
                 dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
                 dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
-#ifdef _DHCP_DEBUG_
-                dhcp_lease_time = 10;
-#endif
                 break;
             case dhcpServerIdentifier :
                 p++;
@@ -603,7 +601,7 @@ uint8_t DHCP_run(void)
     /* waar zijn we, standaard state machine */
     switch ( dhcp_state ) {
 
-        /* initieel, we zetten alles op 0 */
+    /* initieel, we zetten alles op 0 */
     case STATE_DHCP_INIT     :
         DHCP_allocated_ip[0] = 0;
         DHCP_allocated_ip[1] = 0;
@@ -633,7 +631,7 @@ uint8_t DHCP_run(void)
         if (type == DHCP_ACK) {
             /* we kregen een ACK van de server hoera, nu kunnen we een IP toekennen */
 
-            if (1 | check_DHCP_leasedIP()) {
+            if (check_DHCP_leasedIP() == 1) {
                 // Network info assignment from DHCP
                 dhcp_ip_assign();
                 reset_DHCP_timeout();
@@ -762,7 +760,7 @@ int8_t check_DHCP_leasedIP(void)
 {
     uint8_t tmp;
     int32_t ret;
-    SERIAL_puts("check ARP\r\n");
+    // SERIAL_puts("check ARP\r\n");
     //WIZchip RCR value changed for ARP Timeout count control
 
     tmp = getRCR();// retransmission control register, counter value (will transmit n+1 times)
@@ -784,15 +782,17 @@ int8_t check_DHCP_leasedIP(void)
         return 0;
     }
 }
-/* */
-void DHCP_init(uint8_t s, uint8_t *buf, uint32_t xid)
+
+/* init dhcp using socket (sn) buffer (*buf) and random (xid) */
+void DHCP_init(uint8_t sn, uint8_t *buf, uint32_t xid)
 {
     uint8_t zeroip[4] = {0,0,0,0};
     /* get MAC address from chip */
     getSHAR(DHCP_CHADDR);
     /* if MAC is not set, make one up */
     if((DHCP_CHADDR[0] | DHCP_CHADDR[1]  | DHCP_CHADDR[2] | DHCP_CHADDR[3] | DHCP_CHADDR[4] | DHCP_CHADDR[5]) == 0x00) {
-        // assing temporary mac address, you should be set SHAR before call this function.
+        // using temporary mac address, you should be set SHAR before call this function.
+        // TODO remove this code, it is very dangerous
         DHCP_CHADDR[0] = 0x00;
         DHCP_CHADDR[1] = 0x08;
         DHCP_CHADDR[2] = 0xdc;
@@ -801,12 +801,12 @@ void DHCP_init(uint8_t s, uint8_t *buf, uint32_t xid)
         DHCP_CHADDR[5] = 0x00;
         setSHAR(DHCP_CHADDR);
     }
-    DHCP_SOCKET = s; // SOCK_DHCP
+    DHCP_SOCKET = sn; // SOCK_DHCP is global ugly
     pDHCPMSG = (RIP_MSG *)buf;
     DHCP_XID = xid; // magic random number for matching response
     // WIZchip Netinfo Clear
     setSIPR(zeroip); // ip
-    setSUBR(zeroip); // subnet mask, fixed by Edwin
+    setSUBR(zeroip); // subnet mask, fixed by name removed
     setGAR(zeroip);  // gateway
     reset_DHCP_timeout();
     dhcp_state = STATE_DHCP_INIT;
@@ -819,7 +819,7 @@ void reset_DHCP_timeout(void)
     dhcp_retry_count = 0;
 }
 
-/* called via de Timer Task die in hoofdprogramma zit */
+/* called using timer Task in main program */
 void DHCP_time_handler(void)
 {
     dhcp_tick_1s++;
@@ -857,7 +857,7 @@ void getDNSfromDHCP(uint8_t *ip)
     ip[3] = DHCP_allocated_dns[3];
 }
 
-/* */
+/* return lease time in seconds */
 uint32_t getDHCPLeasetime(void)
 {
     return dhcp_lease_time;

@@ -1,12 +1,14 @@
 #ifndef LCDSHIELD_H_INCLUDED
 #define LCDSHIELD_H_INCLUDED
+
 #include <inttypes.h>
 #include <stdlib.h>
 #include "stm32f4xx_conf.h"
-// mijn poging om het LCD shield te laten werken 23:50 uur op vrijdag
 
+/* context for LCD, full this structure, then call lcd_init_context(ctx)
+ * holds all information for managing the LCD
+ */
 typedef struct {
-    //enum {};
     GPIO_TypeDef* RS_port; // port for RS
     GPIO_TypeDef* E_port; // port for RS
     GPIO_TypeDef* D0_port; // port for RS
@@ -24,6 +26,7 @@ typedef struct {
     uint32_t _status;
 } lcd_context_t;
 
+/* API functions */
 ErrorStatus lcd_init_context(lcd_context_t *ctx); // set the default values for the display in the context
 ErrorStatus lcd_init_gpio(lcd_context_t *ctx); // init de GPIO en het display
 void lcd_write(lcd_context_t *ctx, const char *b, uint32_t len); // write string to display
@@ -31,7 +34,7 @@ void lcd_set_cursor_position(lcd_context_t *ctx, int line, int col); // change c
 void lcd_set_backlight(lcd_context_t *ctx, int on); // turn backlight on or off for display
 void lcd_set_cursor(lcd_context_t *ctx, int on, int blink); // set cursor on/off blink on the display
 void lcd_cls(lcd_context_t *ctx); // clear the display,
-void lcd_home(lcd_context_t *ctx); // set cursor to home posistion
+void lcd_home(lcd_context_t *ctx); // set cursor to home position
 
 
 #endif /* LCDSHIELD_H_INCLUDED */
