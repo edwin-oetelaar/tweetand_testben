@@ -564,7 +564,7 @@ void VS_Registers_Dump(void); // test internal check vs10xx all register dump to
 uint8_t VS_SPI_SendByte(uint8_t const byte); // tijdelijke fix
 uint8_t VS_Dreq_Wait(uint32_t timeout); // timeout in ms
 void SPI2_SendZeroBytes(uint8_t count); // send count 0x00 bytes to spi port 2
-uint8_t VS_SDI_Write_Buffer(const uint8_t *buf, uint16_t len);
+uint8_t VS_SDI_Write_Buffer(const char *buf, uint16_t len);
 uint8_t VS_SDI_JAS_Buffer(const char *ptr, uint16_t len); // zonder DMA data erin jassen Ben Goed oplossing
 void VS_Test_Sine(uint8_t onoff, uint8_t freq); // sine on/off 0x65 as freq works
 uint8_t VS_Encoder_Init(radio_player_t *rp);

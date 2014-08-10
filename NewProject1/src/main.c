@@ -577,8 +577,8 @@ static void vTaskDHCP(void *arg)
             }
             /* in het begin zijn we bezig met de DHCP server, dan krijgen we 1 terug */
             if (dhcp_ret == DHCP_RUNNING) {
-                // nog geen IP gekregen, wacht nu 10 ms en kijk of er een antwoord is
-                vTaskDelay(10);
+                // nog geen IP gekregen, wacht nu 100 ms en kijk of er een antwoord is
+                vTaskDelay(100);
             }
 
             // indien succes of andere IP, dan dit toekennen, dit is slechts de eerste keer

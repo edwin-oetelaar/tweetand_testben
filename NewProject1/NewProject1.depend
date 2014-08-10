@@ -507,7 +507,7 @@
 	"stm32f4xx_wwdg.h"
 	"stm32f4xx_rcc.h"
 
-1407491642 source:\\vboxsvr\emblock2\newproject1\src\main.c
+1407526570 source:\\vboxsvr\emblock2\newproject1\src\main.c
 	"stm32f4xx_conf.h"
 	"FreeRTOS.h"
 	"task.h"
@@ -792,7 +792,7 @@
 1406652638 \\vboxsvr\emblock2\newproject1\inc\spliturl.h
 	<stdint.h>
 
-1407492624 source:\\vboxsvr\emblock2\newproject1\src\vs10xx.c
+1407526326 source:\\vboxsvr\emblock2\newproject1\src\vs10xx.c
 	<inttypes.h>
 	"FreeRTOS.h"
 	"task.h"
@@ -802,6 +802,7 @@
 	"stm32f4xx.h"
 	"stm32f4xx_dma.h"
 	"stm32f4xx_spi.h"
+	"stm32f4xx_rcc.h"
 	"stm32f4xx_exti.h"
 	<stdlib.h>
 	<stdio.h>
@@ -812,7 +813,7 @@
 1398348498 \\vboxsvr\emblock2\newproject1\freertos\inc\semphr.h
 	"queue.h"
 
-1407491581 \\vboxsvr\emblock2\newproject1\inc\vs10xx.h
+1407525739 \\vboxsvr\emblock2\newproject1\inc\vs10xx.h
 	"menu.h"
 
 1407064915 \\vboxsvr\emblock2\newproject1\inc\menu.h

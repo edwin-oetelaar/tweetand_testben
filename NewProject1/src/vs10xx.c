@@ -16,6 +16,7 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_dma.h"
 #include "stm32f4xx_spi.h"
+#include "stm32f4xx_rcc.h"
 #include "stm32f4xx_exti.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -117,45 +118,55 @@ void DMA1_Channel5_IRQHandler(void)
     // vPortYieldFromISR();
 #endif
 }
-#if 0
-static void DMA_MemToSPI2(const uint8_t *buff, uint32_t btr)
-{
 
-    DMA_InitTypeDef DMA_InitStructure;
+static void DMA_MemToSPI2(const char *buff, uint32_t btr)
+{ // op de stm32f401ret zit spi2_tx channel0 op stream4 van dma1
+//http://www.st.com/st-web-ui/static/active/en/resource/technical/document/application_note/DM00046011.pdf
+    DMA_InitTypeDef DMA_InitStruct;
 
+    DMA_DeInit(DMA1_Stream4); // want we hebben spi2-tx, zet de DMA uit
+
+    /* clean the init struct fill sane values */
+    DMA_StructInit(&DMA_InitStruct);
     /* shared DMA configuration values */
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) (&(SPI2->DR));
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-    DMA_InitStructure.DMA_BufferSize = btr;
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+    DMA_InitStruct.DMA_Channel=DMA_Channel_0; // SPI2 Tx DAM is DMA1/Stream4/Channel0
+    DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t) (&(SPI2->DR)); //
+    DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // per byte
+    DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte; // per byte
+    DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable; // no inc on SPI address
+    DMA_InitStruct.DMA_BufferSize = btr; // number of bytes to transfer
+    DMA_InitStruct.DMA_Mode = DMA_Mode_Normal; // normal mode, not circular
+    DMA_InitStruct.DMA_Priority = DMA_Priority_High;
 
-    DMA_DeInit(DMA1_Channel5); // want we hebben spi2-tx
-    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t) buff;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStruct.DMA_Memory0BaseAddr = (uint32_t) buff;
+    DMA_InitStruct.DMA_DIR = DMA_DIR_MemoryToPeripheral; // DMA_DIR_PeripheralDST;
+    DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable; // auto increment memory address
+    DMA_InitStruct.DMA_FIFOMode  = DMA_FIFOMode_Disable; //Operate in 'direct mode' without FIFO
 
-    DMA_Init(DMA1_Channel5, &DMA_InitStructure);
+    /* set the DMA registers */
+    DMA_Init(DMA1_Stream4, &DMA_InitStruct);
 
     /* Enable SPI TX request */
     SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Tx /*| SPI_I2S_DMAReq_Rx */, ENABLE);
+    /* just make sure SPI2 is enabled*/
     SPI_Cmd(SPI2, ENABLE);
-    DMA_Cmd(DMA1_Channel5, ENABLE);
-    /* Wait until DMA1_Channel 3 Transfer Complete */
-    while (!DMA_GetFlagStatus(DMA1_FLAG_TC5)) {
+    /* excute DMA transfer command */
+    DMA_Cmd(DMA1_Stream4, ENABLE);
+    /* Wait until DMA1_Channel 4 Transfer Complete */
+    while (DMA_GetFlagStatus(DMA1_Stream4, DMA_FLAG_TCIF4) == RESET) {
         // vTaskDelay(0);
         taskYIELD();
     };
 
-    /* Disable DMA TX Channel */
-    DMA_Cmd(DMA1_Channel5, DISABLE);
+    /*!< Disable DMA TX Channel */
+    DMA_Cmd(DMA1_Stream4, DISABLE);
     SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Tx, DISABLE);
+    /*!< oh boy, the dma is done, but the spi is still working on the last byte */
+    while(SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_BSY) == SET);
+    /*!< Read out DR register to clear it */
+    int temp=(SPI2->DR);
 }
 
-#endif
 #if 0
 void VS_GPIO_Init(void)
 {
@@ -234,7 +245,7 @@ void VS_SPI_GPIO_init(void)
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC, ENABLE);
     // de pinnen van de SPI-2 instellen
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
@@ -245,14 +256,14 @@ void VS_SPI_GPIO_init(void)
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_SPI2); //
     // de VS_xCS pin op PB12 is output
     GPIO_InitStruct.GPIO_Pin =  GPIO_Pin_12; // Pins 12 CS
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
     // de VS_xRESET zit op PC4
     GPIO_InitStruct.GPIO_Pin =  GPIO_Pin_4; // Pins 4
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
@@ -261,7 +272,7 @@ void VS_SPI_GPIO_init(void)
     // de VS_DREQ zit op PC5
     // de inputs
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 ; // Pins 5 : Int
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP; // ok pull dit up dank u
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN; // ok dit is input
     GPIO_Init(GPIOC, &GPIO_InitStruct); // ok dit is GPIO C
@@ -269,6 +280,8 @@ void VS_SPI_GPIO_init(void)
     // enable the SPI clocks
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE); // for SPI2, let op dit is APB1 niet 2 ok
+    // ook de DMA clock enable zetten
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1,ENABLE);
     // set the SPI parameters to sane defaults
     SPI_StructInit(&SPI_InitStruct);
     // fill in the blanks
@@ -700,7 +713,7 @@ void SPI2_SendZeroBytes(uint8_t count)
 
 */
 
-uint8_t VS_SDI_Write_Buffer(const uint8_t *ptr, uint16_t len)
+uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len)
 {
     uint16_t atonce = 32;
     uint16_t sdiFree=0;
@@ -746,8 +759,8 @@ uint8_t VS_SDI_Write_Buffer(const uint8_t *ptr, uint16_t len)
 
 uint8_t VS_SDI_JAS_Buffer(const char *ptr, uint16_t len)
 {
-    uint16_t atonce = 32;
-    uint16_t sdiFree =0;
+    uint16_t atonce;
+    uint16_t sdiFree;
     //	uint16_t audioFill;
     while (len) {
         /* new logic, use sdiFree instead of DREQ with default 32 byte value */
@@ -762,12 +775,13 @@ uint8_t VS_SDI_JAS_Buffer(const char *ptr, uint16_t len)
             if (atonce) {
                 if (xSemaphoreTake(xSemaphoreSPI2,1000)) {
                     GPIO_SetBits(VS_xCS_PRT, VS_xCS); // SDI
-
+                    #if 0
                     int i;
-                    for (i=0; i<atonce; i++) {
-                        VS_SPI_SendByte(*(ptr+i));
-                    }
-
+                    for (i=0; i<atonce; i++) { VS_SPI_SendByte(*(ptr+i)); }
+                    #else
+                    // we use DMA to handle pushing data to spi
+                    DMA_MemToSPI2(ptr, atonce);
+                    #endif
                     ptr += atonce;
                     len -= atonce;
                     GPIO_ResetBits(VS_xCS_PRT, VS_xCS); // not SDI
@@ -860,6 +874,7 @@ uint8_t VS_SPI_SendByte(uint8_t const byte)
         ; /* spin here */
     }
     SPI_I2S_SendData(SPI2, byte);
+
     /* wait for receive not empty */
     while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET) {
         ; /* spin here */
