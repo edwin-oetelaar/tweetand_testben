@@ -33,7 +33,7 @@ ErrorStatus lcd_init_context(lcd_context_t *ctx)
     ctx->D2_port= GPIOB;
     ctx->D3_pin = GPIO_Pin_8;
     ctx->D3_port= GPIOA;
-    ctx->BL_pin = GPIO_Pin_0;
+    ctx->BL_pin = GPIO_Pin_6; // GPIO_Pin_0;
     ctx->BL_port= GPIOB;
     return SUCCESS;
 };

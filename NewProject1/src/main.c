@@ -238,25 +238,26 @@ void USART1_hardware_init(uint32_t baudrate)
 
     // enable Clocks for APB2 (dus niet APB1) and GPIOB
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE); // ok
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOA, ENABLE); // ok
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB /* | RCC_AHB1Periph_GPIOA */, ENABLE); // ok
 
     /* defaults in struct */
     GPIO_StructInit(&GPIO_InitStruct);
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
+    // GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF; // alt function
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP; // push pull
     GPIO_InitStruct.GPIO_Speed = GPIO_High_Speed; // fast
-
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP; // no pull needed
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
     GPIO_Init(GPIOB, &GPIO_InitStruct); // poort B B B B B B
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10; /*| GPIO_Pin_7 */  // Pins 6 (TX) and 7 (RX) are used
-    GPIO_Init(GPIOA, &GPIO_InitStruct); // poort A voor pin 10 RX
+
+    //GPIO_Init(GPIOA, &GPIO_InitStruct); // poort A voor pin 10 RX
 
     //Connect to AF
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); // usart1 TX
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1); // usart1 RX
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1); // usart1 TX
+    // GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1); // usart1 RX
 
     /* defaults in struct */
     USART_StructInit(&USART_InitStruct);
@@ -266,7 +267,7 @@ void USART1_hardware_init(uint32_t baudrate)
     USART_InitStruct.USART_StopBits = USART_StopBits_1;
     USART_InitStruct.USART_Parity = USART_Parity_No;
     USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStruct.USART_Mode =  USART_Mode_Tx | USART_Mode_Rx;
+    USART_InitStruct.USART_Mode =  /* USART_Mode_Tx |*/ USART_Mode_Rx;
     // USART_OverSampling8Cmd(USART1,1); /* allow for very high bitrates, set oversample to 8 instead of 16 */
 
 
@@ -299,7 +300,6 @@ void USART2_hardware_init(uint32_t baudrate)
     /* init the struct with defaults */
     GPIO_StructInit(&GPIO_InitStruct);
     USART_StructInit(&USART_InitStruct);
-
 
     // enable Clocks for APB1 and GPIOA
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
@@ -800,7 +800,7 @@ void vTaskApplication( void *pvParameters )
     VS_Volume_Set(0x0202);
     /* nu encoden naar server */
     xprintf("start streaming\r\n");
-    int8_t rx = stream_to_test_server(2, "s1.vergadering-gemist.nl", 8000 /*port*/, "test"/*mountpoint*/ , "test" /*password*/);
+    int8_t rx = stream_to_test_server(2, "s1.vergadering-gemist.nl", 8000 /*port*/, "test2"/*mountpoint*/ , "test" /*password*/);
     xprintf("stop streaming %d\r\n",rx);
 
     /* we gaan een DNS lookup doen naar de 'SERVER' die ik nog niet ken */
@@ -1074,21 +1074,24 @@ int main(void)
     QUEUE_INIT(my_RX_queue);
     QUEUE_INIT(my_KEYS_queue);
 
-//   GPIO_Init_edwin();
     VS_SPI_GPIO_init();
     USART2_hardware_init(115200);
 
-    /* setup USART1 speed */
-    if (use_230400)
-        USART1_hardware_init(230400); // moet hoger worden?
-    else
-        USART1_hardware_init(460800);
-
-    uint16_t i;
-    for (i=0; i<255; i++) {
-        while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET); // Wait for Empty
-        USART_SendData(USART1, i); // Echo Char
+    /* setup USART1 speed, only RX enabled */
+    /* Please note, the Transmit from USART1 is disabled, the pin is used by the LCD */
+    if (use_230400) {
+        USART1_hardware_init(230400);    // moet hoger worden?
     }
+    else {
+        USART1_hardware_init(460800);
+    }
+
+//    uint16_t i;
+//    for (i=0; i<255; i++) {
+//        while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET); // Wait for Empty
+//        USART_SendData(USART1, i); // send char
+//    }
+
 
     SERIAL_puts("Boot\r\n");
     adc_configure();
@@ -1142,6 +1145,7 @@ int main(void)
 void vApplicationStackOverflowHook( TaskHandle_t xTask,
                                     signed char *pcTaskName )
 {
+    /* hang here so we can attach a debugger to find out what happened */
     for(;;);
 }
 
