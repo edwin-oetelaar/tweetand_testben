@@ -561,11 +561,11 @@ uint16_t VS_Read_SCI(uint8_t reg); // read a register in vs10xx chip
 void VS_Write_SCI(uint8_t reg, uint16_t val); // write register inside vs10xx chip
 void VS_Write_SDI(uint8_t b); // write single byte into data stream of VS chip
 void VS_Registers_Dump(void); // test internal check vs10xx all register dump to screen
-uint8_t VS_SPI_SendByte(uint8_t const byte); // tijdelijke fix
-uint8_t VS_Dreq_Wait(uint32_t timeout); // timeout in ms
-void SPI2_SendZeroBytes(uint8_t count); // send count 0x00 bytes to spi port 2
-uint8_t VS_SDI_Write_Buffer(const char *buf, uint16_t len);
-uint8_t VS_SDI_JAS_Buffer(const char *ptr, uint16_t len); // zonder DMA data erin jassen Ben Goed oplossing
+uint8_t VS_SPI_SendByte(const uint8_t  byte); // tijdelijke fix
+uint8_t VS_Dreq_Wait(const uint32_t timeout);/**< wait for DREQ to become ready, timeout in ms */
+void SPI2_SendZeroBytes(uint8_t count); /**<  send count 0x00 bytes to spi port 2 */
+uint8_t VS_SDI_Write_Buffer(const char *buf, uint16_t len);/**< write block of memory to Vs1063 over SPI using DMA transfer */
+
 void VS_Test_Sine(uint8_t onoff, uint8_t freq); // sine on/off 0x65 as freq works
 uint8_t VS_Encoder_Init(radio_player_t *rp);
 /* Read 16-bit value from addr under mutex protection */

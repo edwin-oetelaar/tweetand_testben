@@ -164,62 +164,10 @@ static void DMA_MemToSPI2(const char *buff, uint32_t btr)
     /*!< oh boy, the dma is done, but the spi is still working on the last byte */
     while(SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_BSY) == SET);
     /*!< Read out DR register to clear it */
-    int temp=(SPI2->DR);
+    (void) (SPI2->DR);
 }
 
-#if 0
-void VS_GPIO_Init(void)
-{
-    GPIO_InitTypeDef GPIO_InitStructure;
 
-    GPIO_InitStructure.GPIO_Pin = VS_xCS | VS_xRESET;
-
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-    GPIO_SetBits(GPIOB, VS_xRESET); // not reset
-    GPIO_SetBits(GPIOB, VS_xCS); // chip not selected
-
-    // set VS_DREQ als input pin with pull up
-    GPIO_InitStructure.GPIO_Pin = VS_DREQ; // PinB.11
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-#if 0
-    EXTI_InitTypeDef EXTI_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-    /* now some magic to get external interrupts working */
-    /* Connect EXTI Line9 to PB.11  */
-    GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource11);
-
-    /* Configure EXTI Line11 to generate an interrupt on rising edge */
-    EXTI_InitStructure.EXTI_Line = EXTI_Line11;
-    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-    EXTI_Init(&EXTI_InitStructure);
-
-    /* IRQ op IO pin nodig voor DREQ op pin 11 van Port B */
-    /* Enable the EXTI9_5 Interrupt */
-    NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-    /* end of the magic interrupt stuff */
-#endif
-
-    // SPI 2
-    //   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1); TODO WHAT IS THIS
-    /* Configure SPIy pins: SCK, MISO and MOSI */
-    GPIO_InitStructure.GPIO_Pin = VS_MISO | VS_MOSI | VS_SCLK;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP; // yes also for MISO
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-}
-#endif
 
 void VS_SPI_GPIO_init(void)
 {
@@ -298,50 +246,6 @@ void VS_SPI_GPIO_init(void)
     SPI_Cmd(SPI2, ENABLE); // enable SPI2
 
 }
-
-#if 0
-
-void VS_SPI_init_hardware(uint8_t slow)
-{
-    // setup up SPI2 hardware, slow or fast
-    // pre: the global xSemaphoreSPI2 must be created
-    // post: SPI2 is set to bytes, mode0, master, duplex
-
-    SPI_InitTypeDef SPI_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-
-    SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-    SPI_InitStructure.SPI_Mode = SPI_Mode_Master; /* we are master */
-    SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b; /* bytes, see spec */
-    SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low; /* mode0 see spec */
-    SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge; /* mode0 */
-    SPI_InitStructure.SPI_NSS = SPI_NSS_Soft; /* yes we control NSS ( \chip_select) */
-    SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB; /* yes, see spec */
-    SPI_InitStructure.SPI_CRCPolynomial = 7; /* dont know */
-    // slow or fast
-    if (slow) {
-        SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;    /* go max speed not SPI_BaudRatePrescaler_4; */
-    } else {
-        SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;    /* go max speed not SPI_BaudRatePrescaler_4; */
-    }
-
-    SPI_Init(SPI2, &SPI_InitStructure);
-    // enable SPI interface
-    SPI_Cmd(SPI2, ENABLE);
-
-    /* now do some magic on DMA interrupt */
-    /* Enable the DMA1_Channel_IRQn Interrupt */
-    //	NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel5_IRQn;
-    //	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    //	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    //	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    //	NVIC_Init(&NVIC_InitStructure);
-}
-
-#endif
-
-// Jas music byte voor byte in de VS1063
-
 
 void VS_Registers_Init(void)
 {
@@ -509,18 +413,6 @@ uint8_t VS_Hard_Reset(void)
     return rv;
 }
 
-// write single byte into data stream of VS chip
-// when not writing registers (SCI) the control lines are in SDI mode by default
-void VS_Write_SDI(uint8_t b)
-{
-    if (xSemaphoreTake(xSemaphoreSPI2,5000)) {
-        //    GPIO_SetBits(VS_xCS_PRT, VS_xCS); // note, this is inverse of write Sci
-        VS_SPI_SendByte(b);
-        xSemaphoreGive(xSemaphoreSPI2);
-    } else {
-        xprintf("err sema spi2 wr sdi\n");
-    }
-}
 /* write a single word to a (control) register inside the VS chip */
 void VS_Write_SCI(uint8_t reg, uint16_t w_data)
 {
@@ -709,55 +601,14 @@ void SPI2_SendZeroBytes(uint8_t count)
     }
 }
 
-/*
-
-*/
-
+/** \brief
+ *
+ * \param ptr const char*
+ * \param len uint16_t
+ * \return uint8_t
+ *
+ */
 uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len)
-{
-    uint16_t atonce = 32;
-    uint16_t sdiFree=0;
-    //	uint16_t audioFill;
-    while (len) {
-        /* new logic, use sdiFree instead of DREQ with default 32 byte value */
-        // audioFill = VS_Read_SCI(SCI_WRAM);
-        // xprintf("\r\nsdiFree=%u audioFill=%u ",sdiFree,audioFill);
-        uint8_t b = GPIO_ReadInputDataBit(VS_DREQ_PRT, VS_DREQ);
-        if (b) {
-            /* Read sdiFree register */
-            sdiFree = VS_Read_Mem(0xc0df); // set page 67 of datasheet ref 10.11.2
-            sdiFree <<= 1; // multiply to get byte count
-            atonce = (sdiFree < len) ? sdiFree : len;
-            if (atonce) {
-                if (xSemaphoreTake(xSemaphoreSPI2,1000)) {
-                    GPIO_SetBits(VS_xCS_PRT, VS_xCS); // SDI
-                    // xprintf("a\n");
-                    DMA_MemToSPI2(ptr, atonce);
-                    // xprintf("b\n");
-                    ptr += atonce;
-                    len -= atonce;
-                    GPIO_ResetBits(VS_xCS_PRT, VS_xCS); // not SDI
-                    xSemaphoreGive(xSemaphoreSPI2);
-                } else {
-                    // we could not get the semaphore for the SPI2 bus
-                    // this means that there is a hangup in the SPI2 bus, someone has not released it
-                    // normally the Semaphore is taken in about 0 ticks because we
-                    // are the only task using serious bandwidth of the SPI2
-                    xprintf("Err, SPI2 sema timeout\n");
-                }
-            } else {
-                xprintf("Err, 0 byte SPI2 req\n");
-            }
-        } else {
-            // chip busy
-            // vTaskDelay(0); // yield
-            taskYIELD();
-        }
-    }
-    return 0;
-}
-
-uint8_t VS_SDI_JAS_Buffer(const char *ptr, uint16_t len)
 {
     uint16_t atonce;
     uint16_t sdiFree;
@@ -922,53 +773,6 @@ static const enc_preset_t enc_presets[] = { {
 
     }
 };
-
-#if 0
-/* not used, */
-unsigned char VScomm_get(void)
-{
-    while (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == RESET) {
-        //	xprintf("fl %x\n",USART2->SR);
-        ;
-    }
-    if (USART_GetFlagStatus(USART2, USART_FLAG_FE)) {
-        xprintf("FrameError\n");
-    }
-    return (unsigned char) USART_ReceiveData(USART2);
-}
-
-void VScomm_init(void)
-{
-    USART_InitTypeDef USART_InitStructure;
-
-    /* USART2 configuration ------------------------------------------------------*/
-    /* USART configured as follow:
-     - BaudRate = 460800 baud (4x 115200 )
-     - Word Length = 8 Bits
-     - One Stop Bit
-     - No parity
-     - Hardware flow control disabled (RTS and CTS signals)
-     - Receive and transmit enabled
-     */
-    USART_InitStructure.USART_BaudRate = 115200 << 2; /* 4x standard */
-    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-    USART_InitStructure.USART_StopBits = USART_StopBits_1;
-    USART_InitStructure.USART_Parity = USART_Parity_No;
-    USART_InitStructure.USART_HardwareFlowControl
-        =USART_HardwareFlowControl_None;
-    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx ;
-
-    /* Disable USART Receive and Transmit interrupts */
-    USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
-
-    /* Configure USART2*/
-    USART_Init(USART2, &USART_InitStructure);
-    USART_LINCmd(USART2,DISABLE);
-    /* Enable the USART1 */
-    USART_Cmd(USART2, ENABLE);
-}
-
-#endif
 
 uint8_t VS_Encoder_Init(radio_player_t *rp)
 {
