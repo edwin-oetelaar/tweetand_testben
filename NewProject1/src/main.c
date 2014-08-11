@@ -240,7 +240,7 @@ void USART1_hardware_init(uint32_t baudrate)
     /* enable Clocks for USART1 and GPIOB */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-    
+
     /* defaults in struct */
     GPIO_StructInit(&GPIO_InitStruct);
 
@@ -250,7 +250,7 @@ void USART1_hardware_init(uint32_t baudrate)
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP; // pull needed, not sure
 
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7; // Pins 7 (RX) is used
-    
+
     /* write into GPIO registers */
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -266,14 +266,14 @@ void USART1_hardware_init(uint32_t baudrate)
     USART_InitStruct.USART_StopBits = USART_StopBits_1;
     USART_InitStruct.USART_Parity = USART_Parity_No;
     USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStruct.USART_Mode = USART_Mode_Rx; /* not used USART_Mode_Tx */ 
+    USART_InitStruct.USART_Mode = USART_Mode_Rx; /* not used USART_Mode_Tx */
     /* USART_OverSampling8Cmd(USART1,1); not used allow for very high bitrates, set oversample to 8 instead of 16 */
 
     /* write values into USART registers*/
     USART_Init(USART1, &USART_InitStruct);
 
     /* enable the USART1 receive interrupt */
-    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE); 
+    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
     /* disable Transmit Data Register empty interrupt */
     USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
 
@@ -498,7 +498,7 @@ static void vTaskDHCP(void *arg)
 
     /* ik kan nu de data uit de chip lezen voor later gebruik */
     /* allocate memory for temp buffer */
-    wiz_NetInfo *netinfo = pvPortMalloc(sizeof(wiz_NetInfo)); 
+    wiz_NetInfo *netinfo = pvPortMalloc(sizeof(wiz_NetInfo));
     if (netinfo) {
         ctlnetwork(CN_GET_NETINFO, netinfo); // GET info from chip
 
@@ -691,7 +691,8 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
                 "Content-Type: audio/mpeg\r\n"
                 "Authorization: Basic %s\r\n"
                 "User-Agent: WizStream1\r\n"
-                "ice-public: 1\r\n"
+                "Ice-Public: 1\r\n"
+                "Ice-Description: Streamsolution test channel 2\r\n"
                 "Pragma: no-cache\r\n"
                 "Cache-Control: no-cache, no-transform, private, no-store, proxy-revalidate\r\n\r\n"
                 ,mntpnt, auth2
@@ -780,10 +781,10 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         }
         /* set flag so irq not pushes data into buffer anymore */
         recorder_active_flag=0;
-        
+
         /* TODO send stop command to VS1063 encoder */
-        
-        
+
+
         /* free streambuffer memory */
         jack_ringbuffer_free(streambuffer);
     }
@@ -802,13 +803,13 @@ void vTaskApplication( void *pvParameters )
     VS_Volume_Set(0x0202);
     /* nu encoden naar server */
     xprintf("start streaming\r\n");
-    
+
     int8_t rx = stream_to_test_server(2, /* socket number */
                             "s1.vergadering-gemist.nl",  /* hostname */
-                            8000 /*port*/, 
-                            "test2"/*mountpoint*/ , 
+                            8000 /*port*/,
+                            "test2"/*mountpoint*/ ,
                             "test" /*password*/ );
-    
+
     xprintf("stop streaming %d\r\n",rx);
 
     VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
