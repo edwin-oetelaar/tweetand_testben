@@ -836,3 +836,561 @@
 1407078777 \\vboxsvr\emblock2\newproject1\inc\ringbuffer.h
 	<sys/types.h>
 
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\misc.c
+	"misc.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\misc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\stm32f4xx.h
+	"core_cm4.h"
+	"system_stm32f4xx.h"
+	<stdint.h>
+	"stm32f4xx_conf.h"
+
+1407762859 c:\repository\test-ben\newproject1\cmsis\core_cm4.h
+	<stdint.h>
+	<core_cmInstr.h>
+	<core_cmFunc.h>
+	<core_cm4_simd.h>
+
+1407762859 c:\repository\test-ben\newproject1\cmsis\core_cminstr.h
+	<cmsis_iar.h>
+
+1407762859 c:\repository\test-ben\newproject1\cmsis\core_cmfunc.h
+	<cmsis_iar.h>
+
+1407762859 c:\repository\test-ben\newproject1\cmsis\core_cm4_simd.h
+	<cmsis_iar.h>
+
+1407762859 c:\repository\test-ben\newproject1\inc\system_stm32f4xx.h
+
+1407762859 c:\repository\test-ben\newproject1\inc\stm32f4xx_conf.h
+	"stm32f4xx_adc.h"
+	"stm32f4xx_crc.h"
+	"stm32f4xx_dbgmcu.h"
+	"stm32f4xx_dma.h"
+	"stm32f4xx_exti.h"
+	"stm32f4xx_flash.h"
+	"stm32f4xx_gpio.h"
+	"stm32f4xx_i2c.h"
+	"stm32f4xx_iwdg.h"
+	"stm32f4xx_pwr.h"
+	"stm32f4xx_rcc.h"
+	"stm32f4xx_rtc.h"
+	"stm32f4xx_sdio.h"
+	"stm32f4xx_spi.h"
+	"stm32f4xx_syscfg.h"
+	"stm32f4xx_tim.h"
+	"stm32f4xx_usart.h"
+	"stm32f4xx_wwdg.h"
+	"misc.h"
+	"stm32f4xx_cryp.h"
+	"stm32f4xx_hash.h"
+	"stm32f4xx_rng.h"
+	"stm32f4xx_can.h"
+	"stm32f4xx_dac.h"
+	"stm32f4xx_dcmi.h"
+	"stm32f4xx_dma2d.h"
+	"stm32f4xx_fmc.h"
+	"stm32f4xx_ltdc.h"
+	"stm32f4xx_sai.h"
+	"stm32f4xx_cryp.h"
+	"stm32f4xx_hash.h"
+	"stm32f4xx_rng.h"
+	"stm32f4xx_can.h"
+	"stm32f4xx_dac.h"
+	"stm32f4xx_dcmi.h"
+	"stm32f4xx_dma2d.h"
+	"stm32f4xx_fmc.h"
+	"stm32f4xx_sai.h"
+	"stm32f4xx_cryp.h"
+	"stm32f4xx_hash.h"
+	"stm32f4xx_rng.h"
+	"stm32f4xx_can.h"
+	"stm32f4xx_dac.h"
+	"stm32f4xx_dcmi.h"
+	"stm32f4xx_fsmc.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_adc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_crc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_dbgmcu.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_dma.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_exti.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_flash.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_gpio.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_i2c.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_iwdg.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_pwr.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_rcc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_rtc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_sdio.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_spi.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_syscfg.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_tim.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_usart.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_wwdg.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_cryp.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_hash.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_rng.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_can.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_dac.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_dcmi.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_dma2d.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_fmc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_ltdc.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_sai.h
+	"stm32f4xx.h"
+
+1407762859 c:\repository\test-ben\newproject1\spl\inc\stm32f4xx_fsmc.h
+	"stm32f4xx.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_adc.c
+	"stm32f4xx_adc.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_can.c
+	"stm32f4xx_can.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_crc.c
+	"stm32f4xx_crc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_dac.c
+	"stm32f4xx_dac.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_dbgmcu.c
+	"stm32f4xx_dbgmcu.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_dcmi.c
+	"stm32f4xx_dcmi.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_dma.c
+	"stm32f4xx_dma.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_exti.c
+	"stm32f4xx_exti.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_gpio.c
+	"stm32f4xx_gpio.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_i2c.c
+	"stm32f4xx_i2c.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_iwdg.c
+	"stm32f4xx_iwdg.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_pwr.c
+	"stm32f4xx_pwr.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_rcc.c
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_rng.c
+	"stm32f4xx_rng.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_rtc.c
+	"stm32f4xx_rtc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_sdio.c
+	"stm32f4xx_sdio.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_spi.c
+	"stm32f4xx_spi.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_syscfg.c
+	"stm32f4xx_syscfg.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_tim.c
+	"stm32f4xx_tim.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_usart.c
+	"stm32f4xx_usart.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\spl\src\stm32f4xx_wwdg.c
+	"stm32f4xx_wwdg.h"
+	"stm32f4xx_rcc.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\croutine.c
+	"FreeRTOS.h"
+	"task.h"
+	"croutine.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\freertos.h
+	<stddef.h>
+	<stdint.h>
+	"projdefs.h"
+	"FreeRTOSConfig.h"
+	"portable.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\projdefs.h
+
+1407762859 c:\repository\test-ben\newproject1\inc\freertosconfig.h
+	<stdint.h>
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\portable.h
+	"..\..\Source\portable\owatcom\16bitdos\pc\portmacro.h"
+	"..\..\Source\portable\owatcom\16bitdos\flsh186\portmacro.h"
+	"../portable/GCC/ATMega323/portmacro.h"
+	"../portable/IAR/ATMega323/portmacro.h"
+	"../../Source/portable/MPLAB/PIC24_dsPIC/portmacro.h"
+	"../../Source/portable/MPLAB/PIC24_dsPIC/portmacro.h"
+	"../../Source/portable/MPLAB/PIC18F/portmacro.h"
+	"../../Source/portable/MPLAB/PIC32MX/portmacro.h"
+	"libFreeRTOS/Include/portmacro.h"
+	"../../Source/portable/SDCC/Cygnal/portmacro.h"
+	"../../Source/portable/GCC/ARM7_LPC2000/portmacro.h"
+	"portmacro.h"
+	"../../Source/portable/GCC/ARM7_LPC23xx/portmacro.h"
+	"..\..\Source\portable\IAR\MSP430\portmacro.h"
+	"../../Source/portable/GCC/MSP430F449/portmacro.h"
+	"../../Source/portable/Rowley/MSP430F449/portmacro.h"
+	"..\..\Source\portable\RVDS\ARM7_LPC21xx\portmacro.h"
+	"../../Source/portable/GCC/ARM7_AT91SAM7S/portmacro.h"
+	"..\..\Source\portable\IAR\AtmelSAM7S64\portmacro.h"
+	"..\..\Source\portable\IAR\AtmelSAM9XE\portmacro.h"
+	"..\..\Source\portable\IAR\LPC2000\portmacro.h"
+	"..\..\Source\portable\IAR\STR71x\portmacro.h"
+	"..\..\Source\portable\IAR\STR75x\portmacro.h"
+	"..\..\Source\portable\GCC\STR75x\portmacro.h"
+	"..\..\Source\portable\IAR\STR91x\portmacro.h"
+	"../../Source/portable/GCC/H8S2329/portmacro.h"
+	"../../Source/portable/GCC/ARM7_AT91FR40008/portmacro.h"
+	"../../Source/portable/RVDS/ARM_CM3/portmacro.h"
+	"../../Source/portable/GCC/ARM_CM3/portmacro.h"
+	"../../Source/portable/GCC/ARM_CM3/portmacro.h"
+	"../../Source/portable/IAR/ARM_CM3/portmacro.h"
+	"../../Source/portable/IAR/ARM_CM3/portmacro.h"
+	"../../Source/portable/CodeWarrior/HCS12/portmacro.h"
+	"../../Source/portable/GCC/MicroBlaze/portmacro.h"
+	"..\..\Source\portable\Paradigm\Tern_EE\small\portmacro.h"
+	"../../Source/portable/GCC/HCS12/portmacro.h"
+	"../../Source/portable/GCC/MCF5235/portmacro.h"
+	"../../../Source/portable/GCC/ColdFire_V2/portmacro.h"
+	"../../Source/portable/CodeWarrior/ColdFire_V2/portmacro.h"
+	"../../Source/portable/GCC/PPC405_Xilinx/portmacro.h"
+	"../../Source/portable/GCC/PPC440_Xilinx/portmacro.h"
+	"..\..\Source\portable\Softune\MB96340\portmacro.h"
+	"frconfig.h"
+	"..\portable\BCC\16BitDOS\PC\prtmacro.h"
+	"frconfig.h"
+	"..\portable\BCC\16BitDOS\flsh186\prtmacro.h"
+	"portmacro.h"
+	"portmacro.h"
+	"portmacro.h"
+	"portmacro.h"
+	"../../Source/portable/IAR/V850ES/portmacro.h"
+	"../../Source/portable/IAR/V850ES/portmacro.h"
+	"../../Source/portable/IAR/V850ES/portmacro.h"
+	"../../Source/portable/IAR/V850ES/portmacro.h"
+	"../../Source/portable/IAR/V850ES/portmacro.h"
+	"../../Source/portable/IAR/78K0R/portmacro.h"
+	"../../Source/portable/IAR/78K0R/portmacro.h"
+	"portmacro.h"
+	"mpu_wrappers.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\portmacro.h
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\mpu_wrappers.h
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\task.h
+	"list.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\list.h
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\croutine.h
+	"list.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\event_groups.c
+	<stdlib.h>
+	"FreeRTOS.h"
+	"task.h"
+	"timers.h"
+	"event_groups.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\timers.h
+	"task.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\event_groups.h
+	"timers.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\heap_4.c
+	<stdlib.h>
+	"FreeRTOS.h"
+	"task.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\list.c
+	<stdlib.h>
+	"FreeRTOS.h"
+	"list.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\port.c
+	"FreeRTOS.h"
+	"task.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\queue.c
+	<stdlib.h>
+	<string.h>
+	"FreeRTOS.h"
+	"task.h"
+	"queue.h"
+	"croutine.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\queue.h
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\tasks.c
+	<stdlib.h>
+	<string.h>
+	"FreeRTOS.h"
+	"task.h"
+	"timers.h"
+	"StackMacros.h"
+	<stdio.h>
+	"tasks_test_access_functions.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\stackmacros.h
+
+1407762859 source:c:\repository\test-ben\newproject1\freertos\src\timers.c
+	<stdlib.h>
+	"FreeRTOS.h"
+	"task.h"
+	"queue.h"
+	"timers.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\lcdshield.c
+	"LCDshield.h"
+	"FreeRTOS.h"
+	"task.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\lcdshield.h
+	<inttypes.h>
+	<stdlib.h>
+	"stm32f4xx_conf.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\analog_input.c
+	"FreeRTOS.h"
+	"task.h"
+	"analog_input.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\analog_input.h
+	<inttypes.h>
+	<stdlib.h>
+	"stm32f4xx_conf.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\comm.c
+	"stm32f4xx.h"
+	"comm.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\comm.h
+
+1407762859 source:c:\repository\test-ben\newproject1\src\data_blobs.c
+	"data_blobs.h"
+	<inttypes.h>
+
+1407762859 c:\repository\test-ben\newproject1\inc\data_blobs.h
+
+1407762859 source:c:\repository\test-ben\newproject1\src\dhcp.c
+	"socket.h"
+	"dhcp.h"
+	<stdio.h>
+
+1407762859 c:\repository\test-ben\newproject1\inc\socket.h
+	"wizchip_conf.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\wizchip_conf.h
+	<stdint.h>
+	"W5200/w5200.h"
+	"w5500.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\w5500.h
+	<stdint.h>
+	"wizchip_conf.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\dhcp.h
+
+1407762859 source:c:\repository\test-ben\newproject1\src\dns.c
+	<string.h>
+	<stdlib.h>
+	"socket.h"
+	"dns.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\dns.h
+	<stdint.h>
+
+1407762859 source:c:\repository\test-ben\newproject1\src\main.c
+	"stm32f4xx_conf.h"
+	"FreeRTOS.h"
+	"task.h"
+	"semphr.h"
+	"timers.h"
+	"event_groups.h"
+	"semphr.h"
+	<stdio.h>
+	<inttypes.h>
+	<stdlib.h>
+	"my_queue.h"
+	"LCDshield.h"
+	"analog_input.h"
+	"wizchip_conf.h"
+	"socket.h"
+	"dhcp.h"
+	"dns.h"
+	"my_helpers.h"
+	"term_io.h"
+	"vs10xx.h"
+	"ringbuffer.h"
+
+1407762859 c:\repository\test-ben\newproject1\freertos\inc\semphr.h
+	"queue.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\my_queue.h
+
+1407762859 c:\repository\test-ben\newproject1\inc\my_helpers.h
+	"FreeRTOS.h"
+	"task.h"
+	<stdio.h>
+	<inttypes.h>
+	<stdlib.h>
+	<string.h>
+	"socket.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\term_io.h
+	<stdint.h>
+	"comm.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\vs10xx.h
+	"menu.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\menu.h
+	"FreeRTOS.h"
+	"task.h"
+	"semphr.h"
+	"spliturl.h"
+
+1407762859 c:\repository\test-ben\newproject1\inc\spliturl.h
+	<stdint.h>
+
+1407762859 c:\repository\test-ben\newproject1\inc\ringbuffer.h
+	<sys/types.h>
+
+1407762859 source:c:\repository\test-ben\newproject1\src\my_helpers.c
+	"my_helpers.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\ringbuffer.c
+	"ringbuffer.h"
+	"FreeRTOS.h"
+	<string.h>
+
+1407762859 source:c:\repository\test-ben\newproject1\src\socket.c
+	"socket.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\spliturl.c
+	"FreeRTOS.h"
+	"task.h"
+	<string.h>
+	<stdlib.h>
+	<limits.h>
+	"term_io.h"
+	"spliturl.h"
+	<stdio.h>
+
+1407762859 source:c:\repository\test-ben\newproject1\src\startup_stm32f4xx.s
+
+1407762859 source:c:\repository\test-ben\newproject1\src\system_stm32f4xx.c
+	"stm32f4xx.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\term_io.c
+	<stdarg.h>
+	"term_io.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\vs10xx.c
+	<inttypes.h>
+	"FreeRTOS.h"
+	"task.h"
+	"semphr.h"
+	"term_io.h"
+	"vs10xx.h"
+	"stm32f4xx.h"
+	"stm32f4xx_dma.h"
+	"stm32f4xx_spi.h"
+	"stm32f4xx_rcc.h"
+	"stm32f4xx_exti.h"
+	<stdlib.h>
+	<stdio.h>
+	"FreeRTOS.h"
+	"task.h"
+	"data_blobs.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\w5500.c
+	"w5500.h"
+
+1407762859 source:c:\repository\test-ben\newproject1\src\wizchip_conf.c
+	<stddef.h>
+	"wizchip_conf.h"
+
