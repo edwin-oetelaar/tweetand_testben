@@ -7,9 +7,32 @@ the hardware is:
 - Wiz550io module
 - DF robot LCD keypad shield
 
+The cpu board
+=============
+
 ![Add some Alt text here]
 (http://www.st.com/st-web-ui/static/active/en/fragment/product_related/rpn_information/board_photo/nucleo-F4.jpg 
 "The low cost ST dev board with STM32F401RE chip and ST-link2 on board")
+
+The keypad shield
+=================
+
+![Add some Alt text here]
+(http://www.dfrobot.com/wiki/images/thumb/a/a8/DSC0410.png/600px-DSC0410.png
+"The low cost DFRobot LCD keypad shield")
+
+The codec board
+===============
+
+![Add some Alt text here]
+(https://cdn.sparkfun.com//assets/parts/7/8/3/2/11684-02.jpg "The VLSI codec")
+
+The network board
+=================
+
+![Add some Alt text here]
+(http://hackers.gallery/wp-content/uploads/2014/03/wiz550io_003.png "Wiznet W5500 on board")
+
 
 This README would normally document whatever steps are necessary to get your application up and running.
 
