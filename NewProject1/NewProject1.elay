@@ -31,7 +31,7 @@
 			<Cursor1 position="14211" topLine="315" />
 		</Cursor>
 	</File>
-	<File name="SPL\src\stm32f4xx_gpio.c" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="SPL\src\stm32f4xx_gpio.c" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="18443" topLine="429" />
 		</Cursor>
@@ -228,7 +228,7 @@
 	</File>
 	<File name="src\main.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="27556" topLine="733" />
+			<Cursor1 position="27556" topLine="0" />
 		</Cursor>
 	</File>
 	<File name="src\my_helpers.c" open="0" top="0" tabpos="25" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
