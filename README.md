@@ -1,5 +1,16 @@
 # README #
-This is a dummy readme, the hardware is a Nucleo STM32F401RET with a VS1063 and a Wiz550io module and a DF robot shield
+This is a small Readme for the project, 
+the hardware is:
+
+- Nucleo STM32F401RET (512 KB flash, 96 KB SRAM) 
+- VS1063 on a sparkfun breakout board 
+- Wiz550io module
+- DF robot LCD keypad shield
+
+![Add some Alt text here]
+(http://www.st.com/st-web-ui/static/active/en/fragment/product_related/rpn_information/board_photo/nucleo-F4.jpg 
+"The low cost ST dev board with STM32F401RE chip and ST-link2 on board")
+
 This README would normally document whatever steps are necessary to get your application up and running.
 
 ### What is this repository for? ###
