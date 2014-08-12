@@ -54,6 +54,24 @@ lcd_context_t LCD; // make a context
 
 jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will put stuff there
 volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
+volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play
+
+enum { radio1 = 0, radio2, radio3, radio4, radio5, radio6, arrow, encoder1, encoder2, no_more_roles } role_t;
+role_t active_role = 0; // current role
+const char titles[] = { "Radio 1 AAC",
+                        "Radio 1 AAC",
+                        "Radio 2 AAC",
+                        "Radio 3 AAC",
+                        "Radio 4 AAC",
+                        "Radio 5 AAC",
+                        "Radio 6 AAC",
+                        "Arrow Rock",
+                        "Encode Test",
+                        "Encode Test2"
+                        "no role"
+                      };
+
+
 
 EventGroupHandle_t xEventBits; // set by dhcp task when network is up and running, bit 0x01 is NETWORK-OK
 SemaphoreHandle_t xSemaphoreSPI2;
@@ -805,10 +823,10 @@ void vTaskApplication( void *pvParameters )
     xprintf("start streaming\r\n");
 
     int8_t rx = stream_to_test_server(2, /* socket number */
-                            "s1.vergadering-gemist.nl",  /* hostname */
-                            8000 /*port*/,
-                            "test2"/*mountpoint*/ ,
-                            "test" /*password*/ );
+                                      "s1.vergadering-gemist.nl",  /* hostname */
+                                      8000 /*port*/,
+                                      "test2"/*mountpoint*/ ,
+                                      "test" /*password*/ );
 
     xprintf("stop streaming %d\r\n",rx);
 
@@ -1085,8 +1103,7 @@ int main(void)
     /* Please note, the Transmit from USART1 is disabled, the pin is used by the LCD */
     if (use_230400) {
         USART1_hardware_init(230400);    // moet hoger worden?
-    }
-    else {
+    } else {
         USART1_hardware_init(460800);
     }
 
