@@ -1,6 +1,5 @@
 #include "my_helpers.h"
 
-
 uint8_t dump_mac(uint8_t *mac, void(*putsfunc)(const char *s))
 {
     char *buf = pvPortMalloc(32); // we proberen zo min mogelijk stack te gebruiken, dus heap allocatie

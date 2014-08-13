@@ -29,6 +29,91 @@
 #define min(a,b) (((a)<(b))?(a):(b))
 static const char zeroes[] = {0,0,0,0,0,0,0,0,0,0};
 
+
+typedef enum {
+    listening = 0, sending = 1, intercom = 2
+} playermode_t;
+
+typedef struct {
+    const char *text; /* text on lcd display */
+    const char *host; /* hostname on internet */
+    const uint8_t ip[4]; /* bare ip when not using hostname, set host=NULL */
+    const uint32_t port; /* port number of service */
+    const char *mount; /* mount point */
+    const playermode_t mode; /* listen or send */
+} channel_t;
+
+static const channel_t channels[] = {
+    {
+        .text = "Radio 1 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio1-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio 2 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio2-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio 3 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio3-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio 4 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio4-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio 5 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio5-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio 6 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio6-sb-aac",
+        .mode = listening
+    },
+    {
+        .text = "Radio Arrow Rock",
+        .host = NULL,
+        .ip =
+        {81, 173, 3, 132},
+        .port = 80,
+        .mount = "",
+        .mode = listening
+    },
+    {
+        .text = "Trans Chan Test ",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test",
+        .mode = sending
+    },
+    {
+        .text = "Trans Chan Test2",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test2",
+        .mode = sending
+    }
+
+};
+
+const uint32_t max_channels = sizeof (channels) / sizeof (channels[0]);
+
 uint8_t WIZ_SPI_ReadByte(void);
 uint8_t WIZ_SPI_SendByte(uint8_t byte);
 uint8_t do_http_get(uint8_t sn, const char *url, void (writefunc)(const char *buf, uint32_t len));
@@ -55,21 +140,6 @@ lcd_context_t LCD; // make a context
 jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will put stuff there
 volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
 volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play
-
-enum { radio1 = 0, radio2, radio3, radio4, radio5, radio6, arrow, encoder1, encoder2, no_more_roles } role_t;
-role_t active_role = 0; // current role
-const char titles[] = { "Radio 1 AAC",
-                        "Radio 1 AAC",
-                        "Radio 2 AAC",
-                        "Radio 3 AAC",
-                        "Radio 4 AAC",
-                        "Radio 5 AAC",
-                        "Radio 6 AAC",
-                        "Arrow Rock",
-                        "Encode Test",
-                        "Encode Test2"
-                        "no role"
-                      };
 
 
 
@@ -194,6 +264,48 @@ void ADC_IRQHandler(void)
 }
 #endif
 
+static void handle_menu_key(uint8_t key)
+{
+    static n = 0;
+
+    switch (key) {
+    case 'D' :
+        if (n < max_channels-1) {
+            n++;
+        } else {
+            n=0;
+        }
+        break;
+    case 'U' :
+        if (n>0) {
+            n--;
+        } else {
+            n=max_channels-1;
+        }
+        break;
+    case 'S' : /* select */
+        break;
+    }
+
+    const channel_t *p = channels+n; // magic
+    //lcd_cls(&LCD);
+    lcd_set_cursor_position(&LCD,0,0);
+    lcd_write(&LCD,p->text,strlen(p->text));
+
+    if (p->host != NULL)     {
+        xprintf("channel= %s : hostname: %s\n", p->text,p->host);
+        lcd_set_cursor_position(&LCD,1,0);
+        lcd_write(&LCD,p->host,strlen(p->host));
+    } else {
+        lcd_set_cursor_position(&LCD,1,0);
+        char buf[20];
+        sprintf(buf,"ip: %d.%d.%d.%d",p->text, p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
+        lcd_write(&LCD,buf,strlen(buf));
+
+        xprintf("channel= %s : use ip  : %d.%d.%d.%d\n",p->text, p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
+    }
+}
+
 static void vTask2(void *arg)
 {
     lcd_init_context(&LCD); // put values in the context
@@ -207,19 +319,64 @@ static void vTask2(void *arg)
         vTaskDelay(200);
     }
 
-    uint32_t cnt = 0;
+    uint32_t keystate=0; // 0=not pressed 1=pressed, 2=waiting for release
+    uint32_t next_state=0; // next state
+
     char buf[20];
+    uint8_t prev_key=0;
+    uint8_t slowkey=1; // double check ADC value
+    handle_menu_key('-'); // initial screen
+
     for (;;) {
         uint16_t val = adc_convert();
         uint8_t key = val2key(val); // lookup de ADC naar key
-        int i = sprintf(buf, "%5" PRIu32 " x %5" PRIu16 " %c", cnt, val, key);
-        cnt++;
-        lcd_home(&LCD);
-        lcd_write(&LCD, buf, i);
-        vTaskDelay(100);
-        //vTaskDelay(90);
-        //x = !x;
-        //GPIO_WriteBit(GPIOB, GPIO_Pin_6, x);
+        //xprintf("%c %d %d\r\n",key,prev_key,keystate,next_state);
+        switch (keystate) {
+        case 0:
+
+            if (key != '-') {
+                /* a key was pressed*/
+                prev_key=key;
+                if (slowkey) {
+                    next_state=1; // fast keys to to state 2, for slow keys go to state 1
+                } else {
+                    SERIAL_write(&key,1);
+                    handle_menu_key(key);
+                    next_state=2; // go to state 2, skip confirmation on ADC
+                }
+            } else {
+                next_state=0; // wait for key again
+            }
+            break;
+
+        case 1:
+            if (key == prev_key) {
+                /* same value 2nd time, accept key */
+                SERIAL_write(&key,1);
+                handle_menu_key(key);
+                next_state=2;
+            } else {
+                // not same key
+                next_state=0;
+            }
+            break;
+
+        case 2:
+            if (key == prev_key) {
+                next_state=2; /* hang here until other value appears */
+            } else {
+                /* wait for keypress again */
+                next_state=0;
+            }
+            break;
+        }
+
+        keystate = next_state;
+        //int i = sprintf(buf, "%5" PRIu32 " x %5" PRIu16 " %c", cnt, val, key);
+        //cnt++;
+        //lcd_home(&LCD);
+        //lcd_write(&LCD, buf, i);
+        vTaskDelay(50);
     }
 }
 
@@ -1159,8 +1316,9 @@ int main(void)
     while (1) {
         // we do not get here
     }
-
 }
+
+
 
 /* called when stack is about to crash */
 void vApplicationStackOverflowHook( TaskHandle_t xTask,
@@ -1210,3 +1368,4 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 
 #endif
+
