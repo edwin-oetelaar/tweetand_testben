@@ -45,7 +45,7 @@ enum {
 /*
  * @brief DHCP client initialization (outside of the main loop)
  * @param s   - socket number
- * @param buf - buffer for procssing DHCP message
+ * @param buf - buffer for processing DHCP message
  * @param xid - random number for transaction
  */
 void DHCP_init(uint8_t s, uint8_t * buf, uint32_t xid);

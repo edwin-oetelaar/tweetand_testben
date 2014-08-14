@@ -31,7 +31,7 @@ static const char zeroes[] = {0,0,0,0,0,0,0,0,0,0};
 
 
 typedef enum {
-    listening = 0, sending = 1, intercom = 2
+    pm_listening = 0, pm_sending = 1, pm_intercom = 2
 } playermode_t;
 
 typedef struct {
@@ -40,6 +40,7 @@ typedef struct {
     const uint8_t ip[4]; /* bare ip when not using hostname, set host=NULL */
     const uint32_t port; /* port number of service */
     const char *mount; /* mount point */
+    const char *passw; /* password for ice cast */
     const playermode_t mode; /* listen or send */
 } channel_t;
 
@@ -49,42 +50,42 @@ static const channel_t channels[] = {
         .host = "icecast.omroep.nl",
         .port = 80,
         .mount = "radio1-sb-aac",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Radio 2 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
         .mount = "radio2-sb-aac",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Radio 3 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
-        .mount = "radio3-sb-aac",
-        .mode = listening
+        .mount = "3fm-sb-aac",
+        .mode = pm_listening
     },
     {
         .text = "Radio 4 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
         .mount = "radio4-sb-aac",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Radio 5 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
         .mount = "radio5-sb-aac",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Radio 6 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
         .mount = "radio6-sb-aac",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Radio Arrow Rock",
@@ -93,21 +94,23 @@ static const channel_t channels[] = {
         {81, 173, 3, 132},
         .port = 80,
         .mount = "",
-        .mode = listening
+        .mode = pm_listening
     },
     {
         .text = "Trans Chan Test ",
         .host = "s1.vergadering-gemist.nl",
         .port = 8000,
         .mount = "test",
-        .mode = sending
+        .passw = "test",
+        .mode = pm_sending
     },
     {
         .text = "Trans Chan Test2",
         .host = "s1.vergadering-gemist.nl",
         .port = 8000,
         .mount = "test2",
-        .mode = sending
+        .passw = "test",
+        .mode = pm_sending
     }
 
 };
@@ -139,7 +142,8 @@ lcd_context_t LCD; // make a context
 
 jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will put stuff there
 volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
-volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play
+volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play, after accepting it will set this flag to 0
+volatile uint32_t active_channel = 0; // index of active channel
 
 
 
@@ -284,6 +288,10 @@ static void handle_menu_key(uint8_t key)
         }
         break;
     case 'S' : /* select */
+        /* set channel */
+        active_channel = n;
+        /* set flag */
+        change_status = 1;
         break;
     }
 
@@ -299,24 +307,24 @@ static void handle_menu_key(uint8_t key)
     } else {
         lcd_set_cursor_position(&LCD,1,0);
         char buf[20];
-        sprintf(buf,"ip: %d.%d.%d.%d",p->text, p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
+        sprintf(buf,"ip:%d.%d.%d.%d",p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
         lcd_write(&LCD,buf,strlen(buf));
 
         xprintf("channel= %s : use ip  : %d.%d.%d.%d\n",p->text, p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
     }
 }
 
-static void vTask2(void *arg)
+static void vTaskUserInterface(void *arg)
 {
     lcd_init_context(&LCD); // put values in the context
     lcd_init_gpio(&LCD); // init the gpio
     // lcd_write(&LCD,"aaap",4); // write a string
-    int x=10;
+    int x=2;
     while (x--) {
         lcd_set_backlight(&LCD, 0);
-        vTaskDelay(200);
+        vTaskDelay(100);
         lcd_set_backlight(&LCD, 1);
-        vTaskDelay(200);
+        vTaskDelay(100);
     }
 
     uint32_t keystate=0; // 0=not pressed 1=pressed, 2=waiting for release
@@ -704,6 +712,10 @@ static void vTaskDHCP(void *arg)
         TickType_t t = xTaskGetTickCount();
         if (t > timeout) {
             SERIAL_puts("Check network cable\r\n");
+            lcd_home(&LCD);
+            lcd_set_cursor_position(&LCD,0,0);
+            const char *xtxt = "Check Netw Cable";
+            lcd_write(&LCD,xtxt,strlen(xtxt));
             timeout = t + 2000;
         }
     } while (tmp == PHY_LINK_OFF);
@@ -816,7 +828,7 @@ uint8_t VS_Get_Serial_Byte(void)
     return (t);
 }
 
-uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password)
+uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password, uint32_t *status)
 {
     uint8_t host_ip[]= {0,0,0,0};
     uint8_t mijn_dns[] = { 0,0,0,0 };
@@ -887,6 +899,14 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         len = getSn_RX_RSR(sn);
         vTaskDelay(1);
         timeout--;
+
+        if (*status)
+            break;
+    }
+
+    if (*status) {
+        /* cleanup and exit */
+
     }
 
     if (timeout == 0) {
@@ -929,6 +949,9 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         int nn=0;
         while (1) {
 
+            if (*status)
+                break;
+
             if (jack_ringbuffer_read_space(streambuffer) > bufsize) {
                 // we have data in the buffer for the network
                 jack_ringbuffer_read(streambuffer,buf,bufsize);
@@ -941,16 +964,16 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 
             } else {
                 nn++;
-                if (nn==100) {
+                if (nn==10) {
                     size_t inbuf = jack_ringbuffer_read_space(streambuffer);
                     size_t frbuf = jack_ringbuffer_write_space(streambuffer);
-                    int fullness = inbuf <<2  / bufsize << 2;
+                    //int fullness = inbuf <<2  / bufsize << 2;
                     char tt[32];
-                    sprintf(tt,"%5d %5d %5d\r\n",inbuf,frbuf,fullness);
+                    sprintf(tt,"%5d %5d\r\n",inbuf,frbuf);
                     SERIAL_puts(tt);
                     nn=0;
                 }
-                vTaskDelay(1); //
+                vTaskDelay(10); //
             }
 
         }
@@ -958,173 +981,6 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         recorder_active_flag=0;
 
         /* TODO send stop command to VS1063 encoder */
-
-
-        /* free streambuffer memory */
-        jack_ringbuffer_free(streambuffer);
-    }
-    return rv;
-}
-
-void vTaskApplication( void *pvParameters )
-{
-    /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */
-
-    EventBits_t xx = xEventGroupWaitBits( xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY );
-
-    SERIAL_puts("Network flag is OK\r\n");
-    VS_Hard_Reset();
-    VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-    VS_Volume_Set(0x0202);
-    /* nu encoden naar server */
-    xprintf("start streaming\r\n");
-
-    int8_t rx = stream_to_test_server(2, /* socket number */
-                                      "s1.vergadering-gemist.nl",  /* hostname */
-                                      8000 /*port*/,
-                                      "test2"/*mountpoint*/ ,
-                                      "test" /*password*/ );
-
-    xprintf("stop streaming %d\r\n",rx);
-
-    VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-    VS_Volume_Set(0x0202);
-
-    /* we gaan een DNS lookup doen naar de 'SERVER' die ik nog niet ken */
-
-    // uint8_t host[] = "icecast.omroep.nl";
-    char host[] = "vergadering-gemist.nl";
-
-    uint8_t host_ip[]= {0,0,0,0}; // ip dat ik van de DNS terug krijg (de laatste)
-    uint8_t mijn_dns[] = { 0,0,0,0 }; // moet van DHCP komen, hierin kopieren
-    // DHCP_allocated_dns ... oh oh
-    getDNSfromDHCP(mijn_dns);
-
-    char google_dns[] = {8,8,8,8}; // backup
-
-    /* DNS client initialization */
-    uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
-    DNS_init(1, buf_dns, xTaskGetTickCount()); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
-    int8_t rvx = DNS_run(mijn_dns,host,host_ip);
-
-    if (rvx == -1) {
-        SERIAL_puts("parse error\r\n");
-    }
-    if (rvx == -2) {
-        SERIAL_puts("timeout error\r\n");
-    }
-    if (rvx == -4) {
-        SERIAL_puts("DNS server error\r\n");
-    }
-    if (rvx == 0) {
-        // success flag
-        xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
-    }
-
-    if (rvx < 0) {
-        SERIAL_puts("< 0 antw error\r\n");
-    }
-
-    vPortFree(buf_dns);
-    SERIAL_puts("step 1\r\n");
-    VS_Hard_Reset();
-    SERIAL_puts("step 2\r\n");
-
-    VS_Test_Sine(1, 100); // sine on
-    SERIAL_puts("step 3\r\n");
-    vTaskDelay(200); // pause
-    VS_Test_Sine(0, 100); // sine off
-    SERIAL_puts("step 4\r\n");
-
-
-    VS_Volume_Set(0x0202);
-    SERIAL_puts("step volume\r\n");
-
-
-    extern const uint8_t sample_edwin[] ;
-    VS_SDI_Write_Buffer((char *)sample_edwin, 20081 ); // play sample 1
-    int i;
-    for (i=0; i<100; i++) {
-        VS_SDI_Write_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
-    }
-
-    SERIAL_puts("step 5\r\n");
-    extern const uint8_t sample_ben[] ;
-    VS_SDI_Write_Buffer((char *)sample_ben, 10421 ); // play sample 2
-
-    for (i=0; i<100; i++) {
-        VS_SDI_Write_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
-    }
-
-    SERIAL_puts("step 6\r\n");
-    int8_t rv;
-    rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
-    xprintf("sock=%d\r\n",rv);
-
-    /* recording start */
-    const uint32_t recbufsize = 32768; // bytes
-    const uint32_t recbufsize_wrds = recbufsize >> 1; // words
-
-    uint8_t *tmp = pvPortMalloc(recbufsize);
-    radio_player_t *rp = pvPortMalloc(sizeof(radio_player_t));
-    const uint32_t serial_variant = 1;
-
-    if (serial_variant == 0) {
-        /* variant reading data from REGISTERS of VS1063 via SPI */
-        if(tmp && rp) {
-            xprintf("rec test %d %d\r\n", recbufsize, recbufsize_wrds);
-            memset(rp,0,sizeof(radio_player_t));
-
-            rp->devicemode = DevMode_TX_Ice;
-            rp->encoding_preset = 0; // mp3
-            VS_Encoder_Init(rp);
-            int n=0;
-            int fileSize =0;
-            int counter = recbufsize_wrds;
-            uint8_t *rbp = tmp; // ptr naar buf
-            while (counter) {
-                /* how many words are available in the vs1063 to read now */
-                if ((n = VS_Read_SCI(SCI_RECWORDS)) > 0) {
-                    int i;
-                    /* check buffer boundry */
-                    n = min(n, counter);
-                    /* read the words from the chip */
-                    for (i=0; i<n; i++) {
-                        uint16_t w = VS_Read_SCI(SCI_RECDATA);
-                        *rbp++ = (uint8_t)(w >> 8);
-                        *rbp++ = (uint8_t)(w & 0xFF);
-                    }
-                    /* */
-                    counter -= n;
-                    xprintf("%d\r\n",n);
-                    // fwrite(recBuf, 1, 2*n, writeFp);
-                    fileSize += 2*n;
-                } else {
-                    /* nothing to do */
-                }
-            }
-        }
-    } else {
-        /* serial port variant reading encoded bytes over USART1 */
-        if(tmp && rp) {
-            xprintf("rec test serial %d %d\r\n", recbufsize, recbufsize);
-            memset(rp,0,sizeof(radio_player_t));
-
-            rp->devicemode = DevMode_TX_Ice_Serial;
-            rp->encoding_preset = 0; // mp3
-            xprintf("via serial\r\n");
-            VS_Encoder_Init(rp);
-            /* data starts flowing into usart 1 now */
-            int n=0;
-            uint8_t *rbp = tmp; // ptr naar buf
-            int counter = recbufsize;
-            /* just wait until done */
-            while (counter) {
-                *rbp = VS_Get_Serial_Byte();
-                rbp++;
-                counter--;
-            }
-        }
 
         /* signal encoder to stop set cancel flag */
         /*spec page 57 */
@@ -1173,47 +1029,81 @@ void vTaskApplication( void *pvParameters )
             xprintf("x in encoder =%d\r\n",x);
         } while (VS_Read_SCI(SCI_MODE) & SM_ENCODE);
 
-        VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-        VS_Volume_Set(0x0202);
 
-
-        /* afspelen van opgenomen buffer */
-        VS_SDI_Write_Buffer(tmp, recbufsize );
-
-        for (i=0; i<100; i++) {
-            VS_SDI_Write_Buffer(zeroes, sizeof(zeroes) );
-        }
-        /* done with memory*/
-        vPortFree(tmp);
+        /* free streambuffer memory */
+        jack_ringbuffer_free(streambuffer);
         vPortFree(rp);
+        vPortFree(buf);
+    }
+    return rv;
+}
 
-//   uint8_t ikip[] = {192,168,1,1};
-        xprintf("done playback\r\n");
+
+uint8_t send_stream(channel_t *p, uint32_t *status)
+{
+    int8_t rx = stream_to_test_server(2, /* socket number */
+                                      p->host,  /* hostname */
+                                      p->port, /*port*/
+                                      p->mount, /*mountpoint*/
+                                      p->passw, /*password*/
+                                      status /* check here to stop streaming */
+                                     );
+}
+
+uint8_t receive_stream(channel_t *p , uint32_t *status)
+{
+    uint8_t host_ip[]= {0,0,0,0};
+    uint8_t mijn_dns[] = { 0,0,0,0 };
+    int rv = 0;
+    // get DNS server ip
+    getDNSfromDHCP(mijn_dns);
+
+    uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
+    // init dns request
+    DNS_init(1, buf_dns, xTaskGetTickCount()); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
+    // do the request on given server
+
+    if (p->host == NULL) {
+        /* use bare IP */
+        host_ip[0] = p->ip[0];
+        host_ip[1] = p->ip[1];
+        host_ip[2] = p->ip[2];
+        host_ip[3] = p->ip[3];
+
+
+    } else {
+        /* do dns lookup */
+        int8_t rvx = DNS_run(mijn_dns,p->host,host_ip);
+        if (rvx == 0) {
+            xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
+            vPortFree(buf_dns);
+        } else {
+            vPortFree(buf_dns);
+            xprintf("dns error\r\n");
+            return -1;
+        }
     }
 
 
-
-#define ARROW_HACK 1
-#if ARROW_HACK
-    host_ip[0] = 81;
-    host_ip[1] = 173;
-    host_ip[2] = 3;
-    host_ip[3] = 132 ; /* hack ivm ARROW */
-#endif
-    rv = connect(2,host_ip,80);
+    rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
+    xprintf("sock=%d\r\n",rv);
+    rv = connect(2,host_ip,p->port);
     xprintf("con=%d\r\n",rv);
+    // rv = connect(2,host_ip,80);
+    //  xprintf("con=%d\r\n",rv);
 
     const uint16_t bufsize = 8192; // size of buf in Wiznet voor deze socket
 
     char *buf = pvPortMalloc(bufsize); // pak buf van systeem
-    i = sprintf(buf, // "GET /radio1-sb-aac HTTP/1.1\r\n" /* radio1-sb-aac  radio2-sb-aac 3 4 etc */
-                "GET / HTTP/1.1\r\n"
+    // "GET /radio1-sb-aac HTTP/1.1\r\n" /* radio1-sb-aac  radio2-sb-aac 3 4 etc */
+    int i;
+    i = sprintf(buf,"GET /%s HTTP/1.1\r\n"
                 //   "GET /live128 HTTP/1.1\r\n"
-                //"Host: icecast.omroep.nl\r\n"
-                //"User-Agent: VLC/2.0.8 LibVLC/2.0.8\r\n"
-                //"Range: bytes=0-\r\n"
+                "Host: %s\r\n"
+                "User-Agent: VLC/2.0.8 LibVLC/2.0.8\r\n"
+                "Range: bytes=0-\r\n"
                 "Connection: close\r\n"
-                "Icy-MetaData: 0\r\n\r\n");
+                "Icy-MetaData: 0\r\n\r\n",p->mount,p->host);
 
     rv= send(2,buf,i);
     xprintf("send=%d\r\n",rv);
@@ -1221,6 +1111,12 @@ void vTaskApplication( void *pvParameters )
 
     int32_t got_bytes;
     do {
+
+
+        if (*status)
+            break;
+
+
         got_bytes = recv(2,buf,bufsize);
         // xprintf("b=%d\r\n",got_bytes);
         SERIAL_puts(".");
@@ -1239,12 +1135,49 @@ void vTaskApplication( void *pvParameters )
     } while (got_bytes > 0);
     vPortFree(buf); // en terug aan systeem
     close(2);
+}
 
+void vTaskApplication( void *pvParameters )
+{
+    /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */
 
-    while (1) {
-        vTaskDelay(10);
+    EventBits_t xx = xEventGroupWaitBits( xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY );
+
+    SERIAL_puts("Network flag is OK\r\n");
+    VS_Hard_Reset();
+    VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+    VS_Volume_Set(0x0202);
+    /* do sine test */
+    VS_Test_Sine(1, 100); // sine on
+    vTaskDelay(200); // pause
+    VS_Test_Sine(0, 100); //  // sine off
+    /* play network up sample */
+    extern const uint8_t sample_ben[] ;
+    VS_SDI_Write_Buffer((char *)sample_ben, 10421 ); // play sample 2
+    int i;
+    for (i=0; i<100; i++) {
+        VS_SDI_Write_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
     }
 
+    while (1) {
+        /* check nieuwe task */
+        if (change_status) {
+            change_status=0;
+            const channel_t *p = channels + active_channel;
+
+            if (p->mode == pm_listening) {
+                receive_stream(p, &change_status);
+                VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+                VS_Volume_Set(0x0202);
+            }
+
+            if (p->mode == pm_sending) {
+                send_stream(p, &change_status);
+                VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+                VS_Volume_Set(0x0202);
+            }
+        }
+    }
 }
 
 int main(void)
@@ -1305,7 +1238,7 @@ int main(void)
 
     /* Create Start thread */
 //   xTaskCreate(vTask1, "Ben_Thread", 256, NULL, 0, NULL);
-    xTaskCreate(vTask2, "Theo_Thread", 256, NULL, 0, NULL);
+    xTaskCreate(vTaskUserInterface, "Theo_Thread", 256, NULL, 0, NULL);
     xTaskCreate(vTaskApplication, "App", 512, NULL, 0, NULL);
 
     xTaskCreate(vTaskDHCP, "DHCP", 256, NULL, 0, NULL); /* stack must be large or crash will happen */
