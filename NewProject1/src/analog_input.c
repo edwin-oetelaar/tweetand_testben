@@ -71,7 +71,7 @@ uint16_t adc_convert()
 
 uint8_t val2key(uint16_t key)
 {
-    xprintf("%d\r\n",key);
+    // xprintf("%d\r\n",key);
     // gemeten waarden
     // 227 is SELECT key
     // 188 is LEFT key
