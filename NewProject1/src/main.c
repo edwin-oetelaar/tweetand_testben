@@ -46,6 +46,47 @@ typedef struct {
 
 static const channel_t channels[] = {
     {
+        .text = "Radio Arrow Rock",
+        .host = NULL,
+        .ip =
+        {81, 173, 3, 132},
+        .port = 80,
+        .mount = "",
+        .mode = pm_listening
+    },
+    {
+        .text = "Test Channel1 RX",  /* luisteren naar eigen uitzendingen */
+        .host = "s1.streamsolution.nl",
+        .ip = NULL,
+        .port = 8000,
+        .mount = "test",
+        .mode = pm_listening
+    },
+    {
+        .text = "Test Channel2 RX",  /* luisteren naar eigen uitzendingen */
+        .host = "s1.streamsolution.nl",
+        .ip = NULL,
+        .port = 8000,
+        .mount = "test2",
+        .mode = pm_listening
+    },
+    {
+        .text = "Trans Chan Test ",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test",
+        .passw = "test",
+        .mode = pm_sending
+    },
+    {
+        .text = "Trans Chan Test2",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test2",
+        .passw = "test",
+        .mode = pm_sending
+    },
+    {
         .text = "Radio 1 AAC 32kb",
         .host = "icecast.omroep.nl",
         .port = 80,
@@ -88,31 +129,12 @@ static const channel_t channels[] = {
         .mode = pm_listening
     },
     {
-        .text = "Radio Arrow Rock",
-        .host = NULL,
-        .ip =
-        {81, 173, 3, 132},
+        .text = "BNR nieuwsradio",
+        .host = "icecast-bnr.cdp.triple-it.nl",
         .port = 80,
-        .mount = "",
+        .mount = "bnr_aac_32_04",
         .mode = pm_listening
-    },
-    {
-        .text = "Trans Chan Test ",
-        .host = "s1.vergadering-gemist.nl",
-        .port = 8000,
-        .mount = "test",
-        .passw = "test",
-        .mode = pm_sending
-    },
-    {
-        .text = "Trans Chan Test2",
-        .host = "s1.vergadering-gemist.nl",
-        .port = 8000,
-        .mount = "test2",
-        .passw = "test",
-        .mode = pm_sending
     }
-
 };
 
 const uint32_t max_channels = sizeof (channels) / sizeof (channels[0]);
@@ -144,7 +166,9 @@ jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will pu
 volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
 volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play, after accepting it will set this flag to 0
 volatile uint32_t active_channel = 0; // index of active channel
+static uint32_t menu_channel = 0; // index of channel menu is showing
 
+static uint8_t playout_volume = 64; /*default volume */
 
 
 EventGroupHandle_t xEventBits; // set by dhcp task when network is up and running, bit 0x01 is NETWORK-OK
@@ -152,7 +176,7 @@ SemaphoreHandle_t xSemaphoreSPI2;
 SemaphoreHandle_t xSemaphoreWRAM; // WRAM is mem inside VS1063, must be protected, needs many read writes to registers, may not be interrupted
 SemaphoreHandle_t xSemaphoreWIZCHIP;
 
-extern uint8_t use_230400;
+//extern uint8_t use_230400;
 
 // freetronicsLCDShield lcdshield(D8, D9, D4, D5, D6, D7, D3, A0);
 // RS  E   D0   D1  D2  D3   BL A0
@@ -214,7 +238,9 @@ void USART1_IRQHandler(void)
             /* lock free jack_ringbuffer is very good */
             jack_ringbuffer_write(streambuffer, &ch, 1);
         } else {
-            /* discard, TODO:  SET OVERRUN FLAG */
+            /* discard, TODO:  SET OVERRUN FLAG?
+             * data from Encoder but transmitter already switched off, not a problem
+             */
         }
     }
 }
@@ -268,11 +294,12 @@ void ADC_IRQHandler(void)
 }
 #endif
 
-static void handle_menu_key(uint8_t key)
+static void handle_menu_channels(uint8_t key)
 {
-    static n = 0;
-
+    int n=menu_channel; // get global var
+    /* kanaal selectie */
     switch (key) {
+
     case 'D' :
         if (n < max_channels-1) {
             n++;
@@ -287,6 +314,7 @@ static void handle_menu_key(uint8_t key)
             n=max_channels-1;
         }
         break;
+
     case 'S' : /* select */
         /* set channel */
         active_channel = n;
@@ -294,9 +322,10 @@ static void handle_menu_key(uint8_t key)
         change_status = 1;
         break;
     }
+    menu_channel = n; // update global var
 
     const channel_t *p = channels+n; // magic
-    //lcd_cls(&LCD);
+
     lcd_set_cursor_position(&LCD,0,0);
     lcd_write(&LCD,p->text,strlen(p->text));
 
@@ -314,17 +343,90 @@ static void handle_menu_key(uint8_t key)
     }
 }
 
+static void handle_menu_volume(uint8_t key)
+{
+    /* volume */
+    uint8_t n = VS_Read_SCI(SCI_VOL) && 0xFF;
+
+    switch (key) {
+
+    case 'D' :
+        if (n < 254) {
+            n++;
+        }
+        break;
+    case 'U' :
+        if (n>0) {
+            n--;
+        }
+        break;
+    }
+    playout_volume = n;
+
+    VS_Volume_Set(playout_volume<<8 | playout_volume);
+
+    lcd_set_cursor_position(&LCD,0,0);
+    //              1234567890123456
+    lcd_write(&LCD,"## Set Volume ##",20);
+    lcd_set_cursor_position(&LCD,1,0);
+    char buf[20];
+    sprintf(buf,"%03d          ",255 - playout_volume);
+    lcd_write(&LCD,buf,16);
+
+}
+
+
+static void handle_menu_key(uint8_t key)
+{
+    //static n = 0;
+    static uint8_t kolom = 0;
+    /* kolom 0 = channel selectie,
+     * kolom 1 = volume control
+     */
+    /* left right is kolom */
+    switch (key) {
+    case 'L' :
+        if (kolom==1) {
+            kolom=0;
+        } else {
+            kolom=1;
+        }
+        break;
+    case 'R' :
+        if (kolom==0) {
+            kolom=1;
+        } else {
+            kolom=0;
+        }
+        break;
+    }
+
+
+    switch (kolom) {
+    case 0 :
+        /* channel select */
+        handle_menu_channels(key);
+        break;
+    case 1:
+        /* volume instellen */
+        handle_menu_volume(key);
+        break;
+
+    }
+
+}
 static void vTaskUserInterface(void *arg)
 {
     lcd_init_context(&LCD); // put values in the context
     lcd_init_gpio(&LCD); // init the gpio
-    // lcd_write(&LCD,"aaap",4); // write a string
-    int x=2;
+    lcd_set_cursor_position(&LCD,0,0);
+    lcd_write(&LCD,"*Team Tweetand* ",16); // write a string
+    int x=10;
     while (x--) {
         lcd_set_backlight(&LCD, 0);
         vTaskDelay(100);
         lcd_set_backlight(&LCD, 1);
-        vTaskDelay(100);
+        vTaskDelay(200);
     }
 
     uint32_t keystate=0; // 0=not pressed 1=pressed, 2=waiting for release
@@ -384,7 +486,7 @@ static void vTaskUserInterface(void *arg)
         //cnt++;
         //lcd_home(&LCD);
         //lcd_write(&LCD, buf, i);
-        vTaskDelay(50);
+        vTaskDelay(20);
     }
 }
 
@@ -900,8 +1002,9 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         vTaskDelay(1);
         timeout--;
 
-        if (*status)
+        if (*status) {
             break;
+        }
     }
 
     if (*status) {
@@ -949,8 +1052,9 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         int nn=0;
         while (1) {
 
-            if (*status)
+            if (*status) {
                 break;
+            }
 
             if (jack_ringbuffer_read_space(streambuffer) > bufsize) {
                 // we have data in the buffer for the network
@@ -979,8 +1083,6 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         }
         /* set flag so irq not pushes data into buffer anymore */
         recorder_active_flag=0;
-
-        /* TODO send stop command to VS1063 encoder */
 
         /* signal encoder to stop set cancel flag */
         /*spec page 57 */
@@ -1113,8 +1215,9 @@ uint8_t receive_stream(channel_t *p , uint32_t *status)
     do {
 
 
-        if (*status)
+        if (*status) {
             break;
+        }
 
 
         got_bytes = recv(2,buf,bufsize);
@@ -1168,13 +1271,15 @@ void vTaskApplication( void *pvParameters )
             if (p->mode == pm_listening) {
                 receive_stream(p, &change_status);
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-                VS_Volume_Set(0x0202);
+                VS_Volume_Set((playout_volume << 8) | playout_volume);
+                // VS_Volume_Set(0x0202);
             }
 
             if (p->mode == pm_sending) {
                 send_stream(p, &change_status);
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-                VS_Volume_Set(0x0202);
+                // VS_Volume_Set(0x0202);
+                VS_Volume_Set((playout_volume << 8) | playout_volume);
             }
         }
     }
@@ -1191,11 +1296,11 @@ int main(void)
 
     /* setup USART1 speed, only RX enabled */
     /* Please note, the Transmit from USART1 is disabled, the pin is used by the LCD */
-    if (use_230400) {
-        USART1_hardware_init(230400);    // moet hoger worden?
-    } else {
-        USART1_hardware_init(460800);
-    }
+    //  if (use_230400) {
+    //      USART1_hardware_init(230400);    // moet hoger worden?
+    //  } else {
+    USART1_hardware_init(460800);
+    //  }
 
 //    uint16_t i;
 //    for (i=0; i<255; i++) {

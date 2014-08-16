@@ -120,7 +120,8 @@ void DMA1_Channel5_IRQHandler(void)
 }
 
 static void DMA_MemToSPI2(const char *buff, uint32_t btr)
-{ // op de stm32f401ret zit spi2_tx channel0 op stream4 van dma1
+{
+    // op de stm32f401ret zit spi2_tx channel0 op stream4 van dma1
 //http://www.st.com/st-web-ui/static/active/en/resource/technical/document/application_note/DM00046011.pdf
     DMA_InitTypeDef DMA_InitStruct;
 
@@ -626,13 +627,15 @@ uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len)
             if (atonce) {
                 if (xSemaphoreTake(xSemaphoreSPI2,1000)) {
                     GPIO_SetBits(VS_xCS_PRT, VS_xCS); // SDI
-                    #if 0
+#if 0
                     int i;
-                    for (i=0; i<atonce; i++) { VS_SPI_SendByte(*(ptr+i)); }
-                    #else
+                    for (i=0; i<atonce; i++) {
+                        VS_SPI_SendByte(*(ptr+i));
+                    }
+#else
                     // we use DMA to handle pushing data to spi
                     DMA_MemToSPI2(ptr, atonce);
-                    #endif
+#endif
                     ptr += atonce;
                     len -= atonce;
                     GPIO_ResetBits(VS_xCS_PRT, VS_xCS); // not SDI
@@ -810,16 +813,16 @@ uint8_t VS_Encoder_Init(radio_player_t *rp)
 ////    VS_Write_SCI(SCI_WRAM, 0x0000U);
 
 
-    if (use_230400) {
-        VS_Write_mem(PAR_ENC_TX_UART_DIV,0); /* do not use manual dividers for VS uart */
-        VS_Write_mem(PAR_ENC_TX_UART_BYTE_SPEED,11360U << 1); /* use this Byte speed to calculate internal speed */
-        VS_Write_mem(PAR_ENC_TX_PAUSE_GPIO,0); /* disable all flow control using IO pins of VS chip */
-    } else {
-        /* use 460800 */
-        VS_Write_mem(PAR_ENC_TX_UART_DIV,0); // 0x1407); /* do found in vs1063an_EAC pdf  */
-        VS_Write_mem(PAR_ENC_TX_UART_BYTE_SPEED,11360U << 2); /* use this Byte speed to calculate internal speed */
-        VS_Write_mem(PAR_ENC_TX_PAUSE_GPIO,0); /* disable all flow control using IO pins of VS chip */
-    }
+    //  if (use_230400) {
+    //     VS_Write_mem(PAR_ENC_TX_UART_DIV,0); /* do not use manual dividers for VS uart */
+    //     VS_Write_mem(PAR_ENC_TX_UART_BYTE_SPEED,11360U << 1); /* use this Byte speed to calculate internal speed */
+    //      VS_Write_mem(PAR_ENC_TX_PAUSE_GPIO,0); /* disable all flow control using IO pins of VS chip */
+    //  } else {
+    /* use 460800 */
+    VS_Write_mem(PAR_ENC_TX_UART_DIV,0); // 0x1407); /* do found in vs1063an_EAC pdf  */
+    VS_Write_mem(PAR_ENC_TX_UART_BYTE_SPEED,11360U << 2); /* use this Byte speed to calculate internal speed */
+    VS_Write_mem(PAR_ENC_TX_PAUSE_GPIO,0); /* disable all flow control using IO pins of VS chip */
+    //  }
     // Disable all interrupts except SCI
     // Write1053Sci(SCI_WRAMADDR, VS1053_INT_ENABLE);
     // Write1053Sci(SCI_WRAM, 0x2);
