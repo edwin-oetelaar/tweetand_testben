@@ -57,7 +57,7 @@ static const channel_t channels[] = {
     {
         .text = "Test Channel1 RX",  /* luisteren naar eigen uitzendingen */
         .host = "s1.streamsolution.nl",
-        .ip = NULL,
+        .ip = {0,0,0,0},
         .port = 8000,
         .mount = "test",
         .mode = pm_listening
@@ -65,7 +65,7 @@ static const channel_t channels[] = {
     {
         .text = "Test Channel2 RX",  /* luisteren naar eigen uitzendingen */
         .host = "s1.streamsolution.nl",
-        .ip = NULL,
+        .ip = {0,0,0,0},
         .port = 8000,
         .mount = "test2",
         .mode = pm_listening
@@ -133,6 +133,13 @@ static const channel_t channels[] = {
         .host = "icecast-bnr.cdp.triple-it.nl",
         .port = 80,
         .mount = "bnr_aac_32_04",
+        .mode = pm_listening
+    },
+    {
+        .text = "Absolute Radio UK",
+        .host = "aacplus-ac-32.timlradio.co.uk",
+        .port = 80,
+        .mount = "/",
         .mode = pm_listening
     }
 };
@@ -363,7 +370,7 @@ static void handle_menu_volume(uint8_t key)
     }
     playout_volume = n;
 
-    VS_Volume_Set(playout_volume<<8 | playout_volume);
+    VS_Volume_Set((playout_volume<<8) | playout_volume);
 
     lcd_set_cursor_position(&LCD,0,0);
     //              1234567890123456
@@ -432,7 +439,6 @@ static void vTaskUserInterface(void *arg)
     uint32_t keystate=0; // 0=not pressed 1=pressed, 2=waiting for release
     uint32_t next_state=0; // next state
 
-    char buf[20];
     uint8_t prev_key=0;
     uint8_t slowkey=1; // double check ADC value
     handle_menu_key('-'); // initial screen
@@ -482,10 +488,7 @@ static void vTaskUserInterface(void *arg)
         }
 
         keystate = next_state;
-        //int i = sprintf(buf, "%5" PRIu32 " x %5" PRIu16 " %c", cnt, val, key);
-        //cnt++;
-        //lcd_home(&LCD);
-        //lcd_write(&LCD, buf, i);
+
         vTaskDelay(20);
     }
 }
@@ -749,7 +752,7 @@ static void vTaskDHCP(void *arg)
     /* de netwerk config moet uit een eeprom komen, mogeljk later een 24c32 erbij bakken op de i2c bus */
 
     uint32_t netconfig = NETINFO_DHCP; /* NETINFO_STATIC */
-    uint8_t old_ip_address[4] = {0};   /* het IP van de PIC */
+ //   uint8_t old_ip_address[4] = {0};   /* het IP van de PIC */
     uint8_t old_mac_address[6] = {0};  /* het MAC van de PIC */
 
 
@@ -792,9 +795,9 @@ static void vTaskDHCP(void *arg)
             old_mac_address[i] = netinfo->mac[i]; // copy de gekregen MAC in de nieuwe structure
         }
 
-        for (i=0; i<4; i++) {
-            old_ip_address[i] = netinfo->ip[i]; // copy de gekregen IP
-        }
+    //    for (i=0; i<4; i++) {
+    //        old_ip_address[i] = netinfo->ip[i]; // copy de gekregen IP
+    //    }
 
         /* free buffer */
         vPortFree(netinfo);
@@ -846,7 +849,7 @@ static void vTaskDHCP(void *arg)
         /* we doen DHCP */
         /* buffer maken */
         uint8_t *gDATABUF = pvPortMalloc(2048);  // dit moet niet zo groot zijn....
-        DHCP_init(0, gDATABUF, 0x12345678 ^ xTaskGetTickCount()); // use socket 0 voor alle DHCP dingen
+        DHCP_init(0, gDATABUF, 0x72345678 ^ xTaskGetTickCount()); // use socket 0 voor alle DHCP dingen
         /* Loop until we know DHCP is ok or failed */
         uint8_t dhcp_ret;
 
@@ -859,8 +862,9 @@ static void vTaskDHCP(void *arg)
             SERIAL_puts(txt);
             /* normal value would be waiting for lease to expire, 4  */
             if (dhcp_ret == DHCP_IP_LEASED) {
-                // dan doen we niks behalve slapen, 5 seconden en nog eens kijken
-                vTaskDelay(10000);
+                // dan doen we niks behalve slapen, 60 seconden en nog eens kijken
+                // vTaskDelay(10000);
+                vTaskDelay(60000);
             }
             /* in het begin zijn we bezig met de DHCP server, dan krijgen we 1 terug */
             if (dhcp_ret == DHCP_RUNNING) {
@@ -910,6 +914,8 @@ static void vTaskDHCP(void *arg)
                 xEventGroupSetBits(xEventBits,0x01); // set network bit TODO make CONST
             }
         } // while
+        // free memory
+        vPortFree(gDATABUF);
     }
 }
 
@@ -948,7 +954,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         vPortFree(buf_dns);
     } else {
         vPortFree(buf_dns);
-        xprintf("dns error\r\n");
+        xprintf("dns error %d\r\n",rvx);
         return -1;
     }
 
@@ -1181,7 +1187,7 @@ uint8_t receive_stream(channel_t *p , uint32_t *status)
             vPortFree(buf_dns);
         } else {
             vPortFree(buf_dns);
-            xprintf("dns error\r\n");
+            xprintf("dns error %d\r\n", rvx);
             return -1;
         }
     }
@@ -1214,11 +1220,9 @@ uint8_t receive_stream(channel_t *p , uint32_t *status)
     int32_t got_bytes;
     do {
 
-
         if (*status) {
             break;
         }
-
 
         got_bytes = recv(2,buf,bufsize);
         // xprintf("b=%d\r\n",got_bytes);
@@ -1249,7 +1253,7 @@ void vTaskApplication( void *pvParameters )
     SERIAL_puts("Network flag is OK\r\n");
     VS_Hard_Reset();
     VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-    VS_Volume_Set(0x0202);
+    VS_Volume_Set((playout_volume << 8) | playout_volume);
     /* do sine test */
     VS_Test_Sine(1, 100); // sine on
     vTaskDelay(200); // pause
@@ -1257,10 +1261,10 @@ void vTaskApplication( void *pvParameters )
     /* play network up sample */
     extern const uint8_t sample_ben[] ;
     VS_SDI_Write_Buffer((char *)sample_ben, 10421 ); // play sample 2
-    int i;
-    for (i=0; i<100; i++) {
-        VS_SDI_Write_Buffer(zeroes, sizeof(zeroes) ); // flush decoder
-    }
+    VS_flush_buffers();
+
+    VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+    VS_Volume_Set((playout_volume << 8) | playout_volume);
 
     while (1) {
         /* check nieuwe task */
@@ -1269,16 +1273,16 @@ void vTaskApplication( void *pvParameters )
             const channel_t *p = channels + active_channel;
 
             if (p->mode == pm_listening) {
-                receive_stream(p, &change_status);
+                receive_stream(p, &change_status); // runs until change_status==1
+                VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
-                // VS_Volume_Set(0x0202);
             }
 
             if (p->mode == pm_sending) {
                 send_stream(p, &change_status);
+                VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-                // VS_Volume_Set(0x0202);
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
             }
         }

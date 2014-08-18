@@ -485,16 +485,17 @@ int8_t DNS_run(const uint8_t *dns_ip, const char *name, uint8_t *ip_from_dns)
     int8_t ret_check_timeout;
 
     /* indien onze socket niet UDP is, dan maken we er UDP van */
-    if(getSn_SR(DNS_SOCKET) != SOCK_UDP) {
+    while (getSn_SR(DNS_SOCKET) != SOCK_UDP) {
         socket(DNS_SOCKET, Sn_MR_UDP, IPPORT_DOMAIN, 0x00);
+        vTaskDelay(1);
     }
 
     /* maak de data message voor naar de DNS server */
     len = dns_makequery(0, (char *)name, pDNSMSG, MAX_DNS_BUF_SIZE);
 
     /* zend message naar DNS server op poort 53 */
-    sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN);
-
+ //   sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN);
+    sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN); /* zomaar 2x eens kijken of dat scheelt */
     /* wacht op antwoord of timeout */
     while (1) {
         /* zit er al iets in de Receive buffer */

@@ -303,6 +303,8 @@ uint8_t VS_Soft_Reset(uint16_t _div_reg)
         rv = VS_Dreq_Wait(100);
         xprintf("plugin loading..");
         LoadUserCode();
+        // make sure chip is ready
+        VS_Dreq_Wait(100);
     } else {
         // xprintf("DREQ timeout\n");
         rv = 1;
@@ -574,13 +576,13 @@ void VS_Test_Sine(uint8_t onoff, uint8_t freq)
                 VS_SPI_SendByte(0xEF);
                 VS_SPI_SendByte(0x6E);
                 VS_SPI_SendByte(freq);
-                SPI2_SendZeroBytes(0x10); // fill with 4 zero bytes
+                SPI2_SendZeroBytes(0x10,0); // fill with 4 zero bytes
             } else {
                 VS_SPI_SendByte(0x45);
                 VS_SPI_SendByte(0x78);
                 VS_SPI_SendByte(0x69);
                 VS_SPI_SendByte(0x74);
-                SPI2_SendZeroBytes(0x09);
+                SPI2_SendZeroBytes(0x09,0);
             }
             GPIO_ResetBits(VS_xCS_PRT, VS_xCS); // De- select CS // MOET DIT ECHT Edwin?
             xSemaphoreGive(xSemaphoreSPI2);
@@ -594,10 +596,10 @@ void VS_Test_Sine(uint8_t onoff, uint8_t freq)
     }
 }
 
-void SPI2_SendZeroBytes(uint8_t count)
+void SPI2_SendZeroBytes(uint8_t count, uint8_t b)
 {
     while (count) {
-        VS_SPI_SendByte(0x00);
+        VS_SPI_SendByte(b);
         count--;
     }
 }
@@ -851,4 +853,58 @@ uint8_t VS_Encoder_Init(radio_player_t *rp)
     VS_Write_SCI(SCI_AIADDR, 0x50); // go start encoding now
 
     return rv;
+}
+
+
+void VS_cancel_stream(void)
+{
+    uint8_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE) & 0xFF;
+    uint16_t mode = VS_Read_SCI(SCI_MODE);
+    mode |= SM_CANCEL;
+
+    VS_Write_SCI(SCI_MODE,mode);
+    mode=VS_Read_SCI(SCI_MODE);
+    int counter = 0;
+    while ((mode & SM_CANCEL) && counter < 2048 ) {
+        VS_Dreq_Wait(1);
+        SPI2_SendZeroBytes(32,endfilbyte);
+        counter+=32;
+        mode=VS_Read_SCI(SCI_MODE);
+        vTaskDelay(1);
+    }
+
+    /* send 65 * 32 bytes */
+
+    uint32_t to_send = 65;
+    while (to_send) {
+        VS_Dreq_Wait(1);
+        SPI2_SendZeroBytes(32,endfilbyte);
+        to_send--;
+    }
+}
+
+void VS_flush_buffers(void)
+{
+    uint8_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE) & 0xFF;
+
+    /* send 65 * 32 bytes */
+    uint32_t to_send = 65;
+    while (to_send) {
+        VS_Dreq_Wait(100);
+        SPI2_SendZeroBytes(32,endfilbyte);
+        to_send--;
+    }
+
+    /* nieuwe methode, wachten tot HDAT 0 is geworden */
+    uint16_t busy = VS_Read_SCI(SCI_HDAT0);
+    uint32_t timeout = 2000;
+    while (busy && timeout) {
+        vTaskDelay(1);
+        timeout-- ;
+        busy = VS_Read_SCI(SCI_HDAT0);
+    }
+
+    /**/
+    VS_cancel_stream();
+
 }
