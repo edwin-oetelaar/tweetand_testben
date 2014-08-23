@@ -6,6 +6,7 @@ the hardware is:
 - VS1063 on a sparkfun breakout board 
 - Wiz550io module
 - DF robot LCD keypad shield
+- Will add I2C display soon
 
 The cpu board
 =============
