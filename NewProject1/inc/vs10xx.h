@@ -565,7 +565,7 @@ uint8_t VS_SPI_SendByte(const uint8_t  byte); // tijdelijke fix
 uint8_t VS_Dreq_Wait(const uint32_t timeout);/**< wait for DREQ to become ready, timeout in ms */
 void SPI2_SendZeroBytes(uint8_t count, uint8_t b); /**<  send count b bytes to spi port 2 */
 uint8_t VS_SDI_Write_Buffer(const char *buf, uint16_t len);/**< write block of memory to Vs1063 over SPI using DMA transfer */
-
+void VS_cancel_stream(void);
 void VS_Test_Sine(uint8_t onoff, uint8_t freq); // sine on/off 0x65 as freq works
 uint8_t VS_Encoder_Init(radio_player_t *rp);
 /* Read 16-bit value from addr under mutex protection */

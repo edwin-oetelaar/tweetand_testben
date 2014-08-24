@@ -45,7 +45,7 @@ enum {
     routersOnSubnet         = 3,
     timeServer              = 4,
     nameServer              = 5,
-    dns                     = 6,
+    dnsOption               = 6,
     logServer               = 7,
     cookieServer            = 8,
     lprServer               = 9,
@@ -54,7 +54,7 @@ enum {
     hostName                = 12,
     bootFileSize            = 13,
     meritDumpFile           = 14,
-    domainName              = 15,
+    DhcpDomainName              = 15,
     swapServer              = 16,
     rootPath                = 17,
     extentionsPath          = 18,
@@ -133,6 +133,7 @@ uint8_t DHCP_allocated_ip[4]  = {0, };    // IP address from DHCP
 uint8_t DHCP_allocated_gw[4]  = {0, };    // Gateway address from DHCP
 uint8_t DHCP_allocated_sn[4]  = {0, };    // Subnet mask from DHCP
 uint8_t DHCP_allocated_dns[4] = {0, };    // DNS address from DHCP, TODO dit kunnen er meerdere zijn, nu pakt ie de laatste
+uint8_t DHCP_allocated_dns2[4] = {0, };    // DNS2 address from DHCP, TODO dit kunnen er meerdere zijn, nu pakt ie de laatste
 
 
 int8_t   dhcp_state        = STATE_DHCP_INIT;   // DHCP state
@@ -178,7 +179,7 @@ uint8_t  check_DHCP_timeout(void);
 void     reset_DHCP_timeout(void);
 
 /* Parse message as OFFER and ACK and NACK from DHCP server.*/
-int8_t   parseDHCPCMSG(void);
+int8_t   parseDHCPMSG(void);
 
 /* The default handler of ip assign first */
 void default_ip_assign(void)
@@ -323,8 +324,8 @@ void send_DHCP_DISCOVER(void)
     pDHCPMSG->OPT[k++] = 0x06;	// length of request
     pDHCPMSG->OPT[k++] = subnetMask;
     pDHCPMSG->OPT[k++] = routersOnSubnet;
-    pDHCPMSG->OPT[k++] = dns;
-    pDHCPMSG->OPT[k++] = domainName;
+    pDHCPMSG->OPT[k++] = dnsOption;
+    pDHCPMSG->OPT[k++] = DhcpDomainName;
     pDHCPMSG->OPT[k++] = dhcpT1value;
     pDHCPMSG->OPT[k++] = dhcpT2value;
     pDHCPMSG->OPT[k++] = endOption;
@@ -412,8 +413,8 @@ void send_DHCP_REQUEST(void)
     pDHCPMSG->OPT[k++] = 0x08;
     pDHCPMSG->OPT[k++] = subnetMask;
     pDHCPMSG->OPT[k++] = routersOnSubnet;
-    pDHCPMSG->OPT[k++] = dns;
-    pDHCPMSG->OPT[k++] = domainName;
+    pDHCPMSG->OPT[k++] = dnsOption;
+    pDHCPMSG->OPT[k++] = DhcpDomainName;
     pDHCPMSG->OPT[k++] = dhcpT1value;
     pDHCPMSG->OPT[k++] = dhcpT2value;
     pDHCPMSG->OPT[k++] = performRouterDiscovery;
@@ -488,8 +489,9 @@ int8_t parseDHCPMSG(void)
     uint16_t len;
     uint8_t *p;
     uint8_t *e;
-    uint8_t type = 0; /* needs init, could return undefined value */
-    uint8_t opt_len;
+    // uint8_t type = 0; /* needs init, could return undefined value */
+    uint8_t msg_type = 0;
+    //uint8_t opt_len;
 
     if((len = getSn_RX_RSR(DHCP_SOCKET)) > 0) {
         len = recvfrom(DHCP_SOCKET, (uint8_t *)pDHCPMSG, len, svr_addr, &svr_port);
@@ -501,80 +503,99 @@ int8_t parseDHCPMSG(void)
 
     if (svr_port == DHCP_SERVER_PORT) {
         // compare mac address
-        if ( (pDHCPMSG->chaddr[0] != DHCP_CHADDR[0]) || (pDHCPMSG->chaddr[1] != DHCP_CHADDR[1]) ||
-                (pDHCPMSG->chaddr[2] != DHCP_CHADDR[2]) || (pDHCPMSG->chaddr[3] != DHCP_CHADDR[3]) ||
-                (pDHCPMSG->chaddr[4] != DHCP_CHADDR[4]) || (pDHCPMSG->chaddr[5] != DHCP_CHADDR[5])   ) {
+        int i;
+        for (i=0; i<6; i++) {
             /* Mac Adresses do NOT match */
-            return 0;
+            if ( pDHCPMSG->chaddr[i] != DHCP_CHADDR[i])
+                return 0;
         }
-        type = 0;
+
+        //type = 0;
         p = (uint8_t *)(&pDHCPMSG->op);
         p = p + 240;      // 240 = sizeof(RIP_MSG) + MAGIC_COOKIE size in RIP_MSG.opt - sizeof(RIP_MSG.opt)
         e = p + (len - 240);
+
         while ( p < e ) {
-            switch ( *p ) {
+            uint8_t opt_type = *(p++);
+            uint8_t opt_len = *(p++);
+
+            switch ( opt_type ) {
+
             case endOption :
-                p = e;   // for break while(p < e)
+                return msg_type;
                 break;
+
             case padOption :
-                p++;
                 break;
+
             case dhcpMessageType :
-                p++;
-                p++;
-                type = *p++;
+                msg_type = *p;
                 break;
+
             case subnetMask :
-                p++;
-                p++;
-                DHCP_allocated_sn[0] = *p++;
-                DHCP_allocated_sn[1] = *p++;
-                DHCP_allocated_sn[2] = *p++;
-                DHCP_allocated_sn[3] = *p++;
+                DHCP_allocated_sn[0] = *p;
+                DHCP_allocated_sn[1] = *(p+1);
+                DHCP_allocated_sn[2] = *(p+2);
+                DHCP_allocated_sn[3] = *(p+3);
                 break;
+
             case routersOnSubnet :
-                p++;
-                opt_len = *p++;
-                DHCP_allocated_gw[0] = *p++;
-                DHCP_allocated_gw[1] = *p++;
-                DHCP_allocated_gw[2] = *p++;
-                DHCP_allocated_gw[3] = *p++;
-                p = p + (opt_len - 4);
+                DHCP_allocated_gw[0] = *p;
+                DHCP_allocated_gw[1] = *(p+1);
+                DHCP_allocated_gw[2] = *(p+2);
+                DHCP_allocated_gw[3] = *(p+3);
                 break;
-            case dns :
-                p++;
-                opt_len = *p++;
-                DHCP_allocated_dns[0] = *p++;
-                DHCP_allocated_dns[1] = *p++;
-                DHCP_allocated_dns[2] = *p++;
-                DHCP_allocated_dns[3] = *p++;
-                p = p + (opt_len - 4);
+
+            case dnsOption :
+                if (DHCP_allocated_dns[0] == 0) {
+                    DHCP_allocated_dns[0] = *p;
+                    DHCP_allocated_dns[1] = *(p+1);
+                    DHCP_allocated_dns[2] = *(p+2);
+                    DHCP_allocated_dns[3] = *(p+3);
+                } else {
+                    DHCP_allocated_dns2[0] = *(p);
+                    DHCP_allocated_dns2[1] = *(p+1);
+                    DHCP_allocated_dns2[2] = *(p+2);
+                    DHCP_allocated_dns2[3] = *(p+3);
+                }
                 break;
+
             case dhcpIPaddrLeaseTime :
-                p++;
-                opt_len = *p++;
-                dhcp_lease_time  = *p++;
-                dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
-                dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
-                dhcp_lease_time  = (dhcp_lease_time << 8) + *p++;
+                dhcp_lease_time = 0xFFFFFFFF; // invalidate to forever
+                if (opt_len == 4) {
+                    uint32_t t = 0;
+                    /* fix network byte order for any processor */
+                    t |= *(p + 0) << 24;
+                    t |= *(p + 1) << 16;
+                    t |= *(p + 2) << 8;
+                    t |= *(p + 3) << 0;
+                    dhcp_lease_time = t;
+                }
                 break;
+
             case dhcpServerIdentifier :
-                p++;
-                opt_len = *p++;
-                DHCP_SIP[0] = *p++;
-                DHCP_SIP[1] = *p++;
-                DHCP_SIP[2] = *p++;
-                DHCP_SIP[3] = *p++;
+                DHCP_SIP[0] = *p;
+                DHCP_SIP[1] = *(p+1);
+                DHCP_SIP[2] = *(p+2);
+                DHCP_SIP[3] = *(p+3);
                 break;
+
+            case DhcpDomainName :
+                xprintf("domain name: ");
+                for (i = 0; i < opt_len; ++i) {
+                    xprintf("%c", *(p + i));
+                }
+                xprintf("\r\n");
+                break;
+
             default :
-                p++;
-                opt_len = *p++;
-                p += opt_len;
+                xprintf("unknown opt %d opt_len %d \r\n", opt_type, opt_len);
                 break;
             } // switch
+            p += opt_len;
         } // while
     } // if
-    return	type;
+    return	msg_type;
 }
 
 /* state machine, regelmatig aanroepen */
@@ -601,7 +622,7 @@ uint8_t DHCP_run(void)
     /* waar zijn we, standaard state machine */
     switch ( dhcp_state ) {
 
-    /* initieel, we zetten alles op 0 */
+        /* initieel, we zetten alles op 0 */
     case STATE_DHCP_INIT     :
         DHCP_allocated_ip[0] = 0;
         DHCP_allocated_ip[1] = 0;
@@ -856,6 +877,15 @@ void getDNSfromDHCP(uint8_t *ip)
     ip[2] = DHCP_allocated_dns[2];
     ip[3] = DHCP_allocated_dns[3];
 }
+/* new dns2 options */
+void getDNS2fromDHCP(uint8_t *ip)
+{
+    ip[0] = DHCP_allocated_dns2[0];
+    ip[1] = DHCP_allocated_dns2[1];
+    ip[2] = DHCP_allocated_dns2[2];
+    ip[3] = DHCP_allocated_dns2[3];
+}
+
 
 /* return lease time in seconds */
 uint32_t getDHCPLeasetime(void)

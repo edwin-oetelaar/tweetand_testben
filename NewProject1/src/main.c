@@ -353,7 +353,7 @@ static void handle_menu_channels(uint8_t key)
 static void handle_menu_volume(uint8_t key)
 {
     /* volume */
-    uint8_t n = VS_Read_SCI(SCI_VOL) && 0xFF;
+    uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
 
     switch (key) {
 
@@ -752,7 +752,7 @@ static void vTaskDHCP(void *arg)
     /* de netwerk config moet uit een eeprom komen, mogeljk later een 24c32 erbij bakken op de i2c bus */
 
     uint32_t netconfig = NETINFO_DHCP; /* NETINFO_STATIC */
- //   uint8_t old_ip_address[4] = {0};   /* het IP van de PIC */
+//   uint8_t old_ip_address[4] = {0};   /* het IP van de PIC */
     uint8_t old_mac_address[6] = {0};  /* het MAC van de PIC */
 
 
@@ -795,9 +795,9 @@ static void vTaskDHCP(void *arg)
             old_mac_address[i] = netinfo->mac[i]; // copy de gekregen MAC in de nieuwe structure
         }
 
-    //    for (i=0; i<4; i++) {
-    //        old_ip_address[i] = netinfo->ip[i]; // copy de gekregen IP
-    //    }
+        //    for (i=0; i<4; i++) {
+        //        old_ip_address[i] = netinfo->ip[i]; // copy de gekregen IP
+        //    }
 
         /* free buffer */
         vPortFree(netinfo);
@@ -936,27 +936,41 @@ uint8_t VS_Get_Serial_Byte(void)
     return (t);
 }
 
-uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password, uint32_t *status)
+uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status)
 {
     uint8_t host_ip[]= {0,0,0,0};
-    uint8_t mijn_dns[] = { 0,0,0,0 };
+    //uint8_t mijn_dns[] = { 0,0,0,0 };
+    uint8_t mijn_dns[2][4]= {{0,0,0,0},{0,0,0,0}};
+
     int rv = 0;
     // get DNS server ip
-    getDNSfromDHCP(mijn_dns);
+    getDNSfromDHCP(mijn_dns[0]);
+    // get DNS2 server ip
+    getDNS2fromDHCP(mijn_dns[1]);
 
-    uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
-    // init dns request
-    DNS_init(1, buf_dns, xTaskGetTickCount()); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
-    // do the request on given server
-    int8_t rvx = DNS_run(mijn_dns,host,host_ip);
-    if (rvx == 0) {
-        xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
-        vPortFree(buf_dns);
-    } else {
-        vPortFree(buf_dns);
-        xprintf("dns error %d\r\n",rvx);
-        return -1;
+    uint8_t *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
+    uint8_t dns_counter=0;
+    while (dns_counter < 2) {
+        // init dns request
+        DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF ); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
+        // do the request on given server
+        int8_t rvx = DNS_run(mijn_dns[dns_counter],host,host_ip);
+        if (rvx == 0) {
+            xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
+            // vPortFree(buf_dns);
+            break;
+        } else {
+            //  vPortFree(buf_dns);
+            xprintf("dns error %d\r\n",rvx);
+            //  return -1;
+        }
+        dns_counter++;
     }
+    vPortFree(buf_dns);
+    if (dns_counter == 2) {
+        xprintf("fatal DNS problem\r\n");
+    }
+
 
     rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
     xprintf("sock=%d\r\n",rv);
@@ -1003,7 +1017,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 
     uint16_t len = getSn_RX_RSR(sn);
     uint32_t timeout = 5000;
-    while (len < 13 && timeout != 0) {
+    while ((len < 13) && (timeout != 0)) {
         len = getSn_RX_RSR(sn);
         vTaskDelay(1);
         timeout--;
@@ -1147,7 +1161,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 }
 
 
-uint8_t send_stream(channel_t *p, uint32_t *status)
+uint8_t send_stream(channel_t *p, volatile uint32_t *status)
 {
     int8_t rx = stream_to_test_server(2, /* socket number */
                                       p->host,  /* hostname */
@@ -1161,14 +1175,14 @@ uint8_t send_stream(channel_t *p, uint32_t *status)
 uint8_t receive_stream(channel_t *p , uint32_t *status)
 {
     uint8_t host_ip[]= {0,0,0,0};
-    uint8_t mijn_dns[] = { 0,0,0,0 };
+//   uint8_t mijn_dns[] = { 0,0,0,0 };
     int rv = 0;
     // get DNS server ip
-    getDNSfromDHCP(mijn_dns);
+    //  getDNSfromDHCP(mijn_dns);
 
-    uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
+    //  uint8_t   *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
     // init dns request
-    DNS_init(1, buf_dns, xTaskGetTickCount()); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
+    //  DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF ); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
     // do the request on given server
 
     if (p->host == NULL) {
@@ -1180,20 +1194,53 @@ uint8_t receive_stream(channel_t *p , uint32_t *status)
 
 
     } else {
-        /* do dns lookup */
-        int8_t rvx = DNS_run(mijn_dns,p->host,host_ip);
-        if (rvx == 0) {
-            xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
-            vPortFree(buf_dns);
-        } else {
-            vPortFree(buf_dns);
-            xprintf("dns error %d\r\n", rvx);
+
+        uint8_t mijn_dns[2][4]= {{0,0,0,0},{0,0,0,0}};
+
+        int rv = 0;
+        // get DNS server ip
+        getDNSfromDHCP(mijn_dns[0]);
+        // get DNS2 server ip
+        getDNS2fromDHCP(mijn_dns[1]);
+
+        uint8_t *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
+        uint8_t dns_counter=0;
+        while (dns_counter < 2) {
+            // init dns request
+            DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF ); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
+            // do the request on given server
+            int8_t rvx = DNS_run(mijn_dns[dns_counter],p->host,host_ip);
+            if (rvx == 0) {
+                xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
+                //vPortFree(buf_dns);
+                break;
+            } else {
+                xprintf("dns error %d\r\n",rvx);
+            }
+            dns_counter++;
+        }
+        vPortFree(buf_dns);
+        if (dns_counter == 2) {
+            xprintf("dns fatal error\r\n");
             return -1;
         }
+
+
+
+        /* do dns lookup */
+        //      int8_t rvx = DNS_run(mijn_dns,p->host,host_ip);
+        //      if (rvx == 0) {
+        //          xprintf("ip=%3d.%3d.%3d.%3d\r\n",host_ip[0],host_ip[1],host_ip[2],host_ip[3]);
+        //         vPortFree(buf_dns);
+        //      } else {
+        //         vPortFree(buf_dns);
+        //         xprintf("dns error %d\r\n", rvx);
+        //        return -1;
+        //     }
     }
 
 
-    rv= socket(2,Sn_MR_TCP,32000+xTaskGetTickCount(),0); // must be random number
+    rv= socket(2,Sn_MR_TCP,(2048+xTaskGetTickCount()) & 0xFFFF ,0); // must be random number
     xprintf("sock=%d\r\n",rv);
     rv = connect(2,host_ip,p->port);
     xprintf("con=%d\r\n",rv);
@@ -1291,11 +1338,14 @@ void vTaskApplication( void *pvParameters )
 
 int main(void)
 {
+    // RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_RNG, ENABLE);
+    //  RNG_Cmd(ENABLE);
+
     QUEUE_INIT(my_TX_queue);
     QUEUE_INIT(my_RX_queue);
     QUEUE_INIT(my_KEYS_queue);
 
-    VS_SPI_GPIO_init();
+
     USART2_hardware_init(115200);
 
     /* setup USART1 speed, only RX enabled */
@@ -1314,6 +1364,18 @@ int main(void)
 
 
     SERIAL_puts("Boot\r\n");
+    int i=100;
+    //  while (i) {
+    //   while (RNG_GetFlagStatus(RNG_FLAG_DRDY) == RESET) {
+    //           /* wait until new random number appears */
+    //   }
+    //     uint32_t rn = RNG_GetRandomNumber();
+    //   xprintf("\r\n%d %ud",i,rn);
+
+
+    //   i--;
+    // }
+    VS_SPI_GPIO_init();
     adc_configure();
 
     xSemaphoreSPI2 = xSemaphoreCreateMutex(); // SPI register protection

@@ -188,3 +188,18 @@ const char *socket_error_to_string(const int v)
     }
     return rv;
 }
+
+//Lua: string = read_unique_device_id()
+static int cpu_read_unique_device_id( uint32_t *L )
+{
+    uint32_t *id_addr = (uint32_t *)0x1fff7a10;
+
+    int i;
+    for( i = 0; i < 3; ++i ) {
+        *L = *id_addr;
+        L++;
+        id_addr++;
+    }
+    return 1;
+}
+

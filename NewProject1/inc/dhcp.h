@@ -103,6 +103,8 @@ void getSNfromDHCP(uint8_t* ip);
  * @param ip  - DNS address to be returned
  */
 void getDNSfromDHCP(uint8_t* ip);
+void getDNS2fromDHCP(uint8_t* ip);
+
 /*
  * @brief Get the leased time by DHCP sever
  * @retrun unit 1s

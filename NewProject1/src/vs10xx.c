@@ -865,7 +865,7 @@ void VS_cancel_stream(void)
     VS_Write_SCI(SCI_MODE,mode);
     mode=VS_Read_SCI(SCI_MODE);
     int counter = 0;
-    while ((mode & SM_CANCEL) && counter < 2048 ) {
+    while ((mode & SM_CANCEL) && (counter < 2048) ) {
         VS_Dreq_Wait(1);
         SPI2_SendZeroBytes(32,endfilbyte);
         counter+=32;
@@ -898,7 +898,7 @@ void VS_flush_buffers(void)
     /* nieuwe methode, wachten tot HDAT 0 is geworden */
     uint16_t busy = VS_Read_SCI(SCI_HDAT0);
     uint32_t timeout = 2000;
-    while (busy && timeout) {
+    while ((busy != 0) && (timeout != 0) ) {
         vTaskDelay(1);
         timeout-- ;
         busy = VS_Read_SCI(SCI_HDAT0);
