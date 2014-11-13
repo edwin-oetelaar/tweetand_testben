@@ -1,5 +1,6 @@
 /* GPL code for Wiznet Challenge 2014 */
 
+#include <stm32f4xx.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "analog_input.h"
