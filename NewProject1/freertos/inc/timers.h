@@ -1,5 +1,5 @@
 /*
-    FreeRTOS V8.0.1 - Copyright (C) 2014 Real Time Engineers Ltd.
+    FreeRTOS V8.1.2 - Copyright (C) 2014 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
@@ -1103,7 +1103,7 @@ BaseType_t xTimerPendFunctionCall( PendedFunction_t xFunctionToPend, void *pvPar
  *
  * @return The name assigned to the timer specified by the xTimer parameter.
  */
-const char * pcTimerGetTimerName( TimerHandle_t xTimer );
+const char * pcTimerGetTimerName( TimerHandle_t xTimer ); /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
 
 /*
  * Functions beyond this part are not part of the public API and are intended
@@ -1116,6 +1116,5 @@ BaseType_t xTimerGenericCommand( TimerHandle_t xTimer, const BaseType_t xCommand
 }
 #endif
 #endif /* TIMERS_H */
-
 
 

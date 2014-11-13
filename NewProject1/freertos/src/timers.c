@@ -1,5 +1,5 @@
 /*
-    FreeRTOS V8.0.1 - Copyright (C) 2014 Real Time Engineers Ltd.
+    FreeRTOS V8.1.2 - Copyright (C) 2014 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
@@ -591,7 +591,7 @@ TickType_t xTimeNow;
 		{
 			/* Negative commands are pended function calls rather than timer
 			commands. */
-			if( xMessage.xMessageID < 0 )
+			if( xMessage.xMessageID < ( BaseType_t ) 0 )
 			{
 				const CallbackParameters_t * const pxCallback = &( xMessage.u.xCallbackParameters );
 
@@ -880,6 +880,5 @@ Timer_t * const pxTimer = ( Timer_t * ) xTimer;
 to include software timer functionality.  If you want to include software timer
 functionality then ensure configUSE_TIMERS is set to 1 in FreeRTOSConfig.h. */
 #endif /* configUSE_TIMERS == 1 */
-
 
 

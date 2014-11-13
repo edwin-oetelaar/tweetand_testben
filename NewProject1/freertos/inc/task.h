@@ -1,5 +1,5 @@
 /*
-    FreeRTOS V8.0.1 - Copyright (C) 2014 Real Time Engineers Ltd.
+    FreeRTOS V8.1.2 - Copyright (C) 2014 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
@@ -81,10 +81,10 @@ extern "C" {
  * MACROS AND DEFINITIONS
  *----------------------------------------------------------*/
 
-#define tskKERNEL_VERSION_NUMBER "V8.0.1"
+#define tskKERNEL_VERSION_NUMBER "V8.1.2"
 #define tskKERNEL_VERSION_MAJOR 8
-#define tskKERNEL_VERSION_MINOR 0
-#define tskKERNEL_VERSION_BUILD 1
+#define tskKERNEL_VERSION_MINOR 1
+#define tskKERNEL_VERSION_BUILD 2
 
 /**
  * task. h
@@ -1507,7 +1507,7 @@ void vTaskPriorityInherit( TaskHandle_t const pxMutexHolder ) PRIVILEGED_FUNCTIO
  * Set the priority of a task back to its proper priority in the case that it
  * inherited a higher priority while it was holding a semaphore.
  */
-void vTaskPriorityDisinherit( TaskHandle_t const pxMutexHolder ) PRIVILEGED_FUNCTION;
+BaseType_t xTaskPriorityDisinherit( TaskHandle_t const pxMutexHolder ) PRIVILEGED_FUNCTION;
 
 /*
  * Generic version of the task creation function which is in turn called by the
@@ -1552,10 +1552,15 @@ void vTaskStepTick( const TickType_t xTicksToJump ) PRIVILEGED_FUNCTION;
  */
 eSleepModeStatus eTaskConfirmSleepModeStatus( void ) PRIVILEGED_FUNCTION;
 
+/*
+ * For internal use only.  Increment the mutex held count when a mutex is
+ * taken and return the handle of the task that has taken the mutex.
+ */
+void *pvTaskIncrementMutexHeldCount( void );
+
 #ifdef __cplusplus
 }
 #endif
 #endif /* INC_TASK_H */
-
 
 
