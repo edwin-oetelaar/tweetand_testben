@@ -16,7 +16,7 @@ typedef struct {
     char *username; // auth user url user:pass@
     char *password; // auth pass url
     char *fragment; // fragment #fragment
-    uint8_t scheme; // 0=http 1=ftp 2=rtp 3=file,  -1=>invalid
+    int8_t scheme; // 0=http 1=ftp 2=rtp 3=file,  -1=>invalid
     uint16_t port; // 80
     uint8_t ip[4]; // ip number of host
     uint8_t nocache; // prevent caching

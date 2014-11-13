@@ -122,7 +122,8 @@ uint8_t http_req_from_url(const char *url, http_req_t *req)
     const char * const ptrA = memchr(ptrFirstAuthority, '@', auth_len);
 
     // flag if @ char was found
-    uint8_t bHaveAtChar = ptrA ? 1 : 0;
+    char bHaveAtChar;
+    bHaveAtChar = ptrA ? 1 : 0;
 
     // @ niet gevonden => hostname starts with first char of Authority
     // @ wel gevonden => skip over @ char
@@ -137,7 +138,7 @@ uint8_t http_req_from_url(const char *url, http_req_t *req)
     }
     // post: ptrB points after hostname
     // calc hostname length
-    int hostlen = ptrPastHostname - ptrH;
+    uint32_t hostlen = ptrPastHostname - ptrH;
 
     // not sane, then exit
     if ((hostlen == 0) || (hostlen > 255)) {

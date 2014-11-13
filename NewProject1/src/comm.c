@@ -1,18 +1,23 @@
 /* found somewhere */
 
-#include "stm32f4xx.h"
+#include <stm32f4xx.h>
 #include "comm.h"
 
 #define USARTx USART2 /* nucleo is USART2 op USB */
 
 int comm_test(void)
 {
-	return ( USART_GetFlagStatus(USARTx, USART_FLAG_RXNE) == RESET ) ? 0 : 1;
+    if (RESET == USART_GetFlagStatus(USARTx, USART_FLAG_RXNE)) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
 }
 
 unsigned char comm_get(void)
 {
-	while(USART_GetFlagStatus(USARTx, USART_FLAG_RXNE) == RESET) { ; }
+	while(RESET == USART_GetFlagStatus(USARTx, USART_FLAG_RXNE)) { ; }
 	return (unsigned char)USART_ReceiveData(USARTx);
 }
 
