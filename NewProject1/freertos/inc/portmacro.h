@@ -164,7 +164,7 @@ not necessary for to use this port.  They are defined so the common demo files
 	}
 
 	/* Check the configuration. */
-	#if( configMAX_PRIORITIES > 32 )
+	#if ( configMAX_PRIORITIES > 32 )
 		#error configUSE_PORT_OPTIMISED_TASK_SELECTION can only be set to 1 when configMAX_PRIORITIES is less than or equal to 32.  It is very rare that a system requires more than 10 to 15 difference priorities as tasks that share a priority will time slice.
 	#endif
 
