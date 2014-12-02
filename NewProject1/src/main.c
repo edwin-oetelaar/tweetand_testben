@@ -1,7 +1,7 @@
 /*
  * NADA internet radio receiver (radio) and transmitter (encoder) using Mp3 or Ogg-Vorbis
  * Circuit Cellar Challenge : wiznet 2014
- * Edwin en Ben 10 aug 2014 bitbucket
+ * Edwin en Ben 10 aug 2014 bitbucket (UPDATED nu, 2 december 20:20)
  */
 
 #include "stm32f4xx_conf.h"
