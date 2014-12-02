@@ -284,13 +284,15 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
     CHECK_SOCKMODE(Sn_MR_TCP);
     CHECK_SOCKDATA();
 
-    recvsize = getSn_RxMAX(sn);
+    recvsize = getSn_RxMAX(sn); // size of RX buffer in the chip
+
     if (recvsize < len) {
-        len = recvsize;
+        len = recvsize; // can never receive more than buffer size
     }
+
     while (1) {
-        recvsize = getSn_RX_RSR(sn);
-        tmp = getSn_SR(sn);
+        recvsize = getSn_RX_RSR(sn); // how many in RX buffer of chip
+        tmp = getSn_SR(sn); // get status of socket
         if (tmp != SOCK_ESTABLISHED) {
             if (tmp == SOCK_CLOSE_WAIT) {
                 if (recvsize != 0) {
@@ -304,21 +306,25 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
                 return -1; /* on error return -1 not -7 WTF: SOCKERR_SOCKSTATUS */
             }
         }
+
         if ((sock_io_mode & (1 << sn)) && (recvsize == 0)) {
             return SOCK_BUSY;
         }
+
         if (recvsize != 0) {
             break;
         }
-    };
+    }
+
     if (recvsize < len) {
         len = recvsize;
     }
-    wiz_recv_data(sn, buf, len);
+
+    wiz_recv_data(sn, buf, len); // copy data from chip into buffer
     setSn_CR(sn, Sn_CR_RECV); // set control to receive
     while (getSn_CR(sn)) {
         /* nop nop*/
-    } ; /* wait until the bit clears */
+    }; /* wait until the bit clears */
     return len;
 }
 
@@ -684,3 +690,27 @@ int8_t getsockopt(uint8_t sn, sockopt_type sotype, void *arg)
     }
     return SOCK_OK;
 }
+#if 0
+/* print the socket error in human text */
+const char *err_to_str(int8_t err) {
+char *ptr = "undef";
+    switch (err) {
+        case SOCK_OK: ptr="SOCK_OK"; break;
+        case SOCKERR_SOCKNUM: ptr="SOCKERR_SOCKNUM"; break;
+        case SOCKERR_SOCKOPT: ptr="SOCKERR_SOCKOPT"; break;
+        case SOCKERR_SOCKINIT: ptr="SOCKERR_SOCKINIT"; break;
+        case SOCKERR_SOCKCLOSED: ptr="SOCKERR_SOCKCLOSED"; break;
+        case SOCKERR_SOCKMODE: ptr="SOCKERR_SOCKMODE"; break;
+        case SOCKERR_SOCKFLAG: ptr="SOCKERR_SOCKFLAG"; break;
+        case SOCKERR_SOCKSTATUS: ptr="SOCKERR_SOCKSTATUS"; break;
+        case SOCKERR_ARG: ptr="SOCKERR_ARG"; break;
+        case SOCKERR_PORTZERO: ptr="SOCKERR_PORTZERO"; break;
+        case SOCKERR_IPINVALID: ptr="SOCKERR_IPINVALID"; break;
+        case SOCKERR_TIMEOUT: ptr="SOCKERR_TIMEOUT"; break;
+        case SOCKERR_DATALEN: ptr="SOCKERR_DATALEN"; break;
+        case SOCKERR_BUFFER: ptr="SOCKERR_BUFFER"; break;
+    }
+    return ptr;
+}
+
+#endif

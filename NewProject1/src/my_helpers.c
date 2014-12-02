@@ -141,6 +141,9 @@ const char *socket_error_to_string(const int v)
 {
     const char *rv;
     switch (v) {
+    case SOCK_OK:
+        rv="SOCK_OK";
+        break;
     case SOCKERR_SOCKNUM:
         rv = "Invalid socket number";
         break;

@@ -12,7 +12,7 @@
 
 #define WIZNET_SPI          SPI1 /* hier zit de wiznet chip wiz550io */
 
-const char *socket_error_to_string(int v);
+const char *socket_error_to_string(const int v);
 uint8_t dump_mac(uint8_t *mac, void(*putsfunc)(const char *s));
 uint8_t dump_ip(uint8_t *ip, void(*putsfunc)(const char *s));
 uint8_t dump_network_info(void(*putsfunc)(const char *s));

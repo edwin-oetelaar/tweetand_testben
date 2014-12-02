@@ -25,6 +25,7 @@
 #include "term_io.h"
 #include "vs10xx.h"
 #include "ringbuffer.h"
+#include "wizchip_conf.h"
 
 #define min(a, b) (((a)<(b))?(a):(b))
 static const char zeroes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -51,103 +52,112 @@ typedef struct {
 } channel_t;
 
 static const channel_t channels[] = {
-        {
-                .text = "Radio Arrow Rock",
-                .host = NULL,
-                .ip =
-                        {81, 173, 3, 132},
-                .port = 80,
-                .mount = "",
-                .mode = pm_listening
-        },
-        {
-                .text = "Test Channel1 RX",  /* luisteren naar eigen uitzendingen */
-                .host = "s1.streamsolution.nl",
-                .ip = {0, 0, 0, 0},
-                .port = 8000,
-                .mount = "test",
-                .mode = pm_listening
-        },
-        {
-                .text = "Test Channel2 RX",  /* luisteren naar eigen uitzendingen */
-                .host = "s1.streamsolution.nl",
-                .ip = {0, 0, 0, 0},
-                .port = 8000,
-                .mount = "test2",
-                .mode = pm_listening
-        },
-        {
-                .text = "Trans Chan Test ",
-                .host = "s1.vergadering-gemist.nl",
-                .port = 8000,
-                .mount = "test",
-                .passw = "test",
-                .mode = pm_sending
-        },
-        {
-                .text = "Trans Chan Test2",
-                .host = "s1.vergadering-gemist.nl",
-                .port = 8000,
-                .mount = "test2",
-                .passw = "test",
-                .mode = pm_sending
-        },
-        {
-                .text = "Radio 1 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "radio1-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "Radio 2 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "radio2-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "Radio 3 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "3fm-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "Radio 4 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "radio4-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "Radio 5 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "radio5-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "Radio 6 AAC 32kb",
-                .host = "icecast.omroep.nl",
-                .port = 80,
-                .mount = "radio6-sb-aac",
-                .mode = pm_listening
-        },
-        {
-                .text = "BNR nieuwsradio",
-                .host = "icecast-bnr.cdp.triple-it.nl",
-                .port = 80,
-                .mount = "bnr_aac_32_04",
-                .mode = pm_listening
-        },
-        {
-                .text = "Absolute Radio UK",
-                .host = "aacplus-ac-32.timlradio.co.uk",
-                .port = 80,
-                .mount = "/",
-                .mode = pm_listening
-        }
+    {
+        .text = "Radio Arrow 1",
+        .host = NULL,
+        .ip =
+        {91,221,151,156},
+        .port = 80,
+        .mount = "",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio Arrow 2",
+        .host = NULL,
+        .ip =
+        {91,221,151,178},
+        .port = 9109,
+        .mount = "",
+        .mode = pm_listening
+    },
+    {
+        .text = "Test Channel1 RX",  /* luisteren naar eigen uitzendingen */
+        .host = "s1.streamsolution.nl",
+        .ip = {0, 0, 0, 0},
+        .port = 8000,
+        .mount = "test",
+        .mode = pm_listening
+    },
+    {
+        .text = "Test Channel2 RX",  /* luisteren naar eigen uitzendingen */
+        .host = "s1.streamsolution.nl",
+        .ip = {0, 0, 0, 0},
+        .port = 8000,
+        .mount = "test2",
+        .mode = pm_listening
+    },
+    {
+        .text = "Trans Chan Test ",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test",
+        .passw = "test",
+        .mode = pm_sending
+    },
+    {
+        .text = "Trans Chan Test2",
+        .host = "s1.vergadering-gemist.nl",
+        .port = 8000,
+        .mount = "test2",
+        .passw = "test",
+        .mode = pm_sending
+    },
+    {
+        .text = "Radio 1 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio1-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio 2 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio2-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio 3 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "3fm-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio 4 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio4-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio 5 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio5-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "Radio 6 AAC 32kb",
+        .host = "icecast.omroep.nl",
+        .port = 80,
+        .mount = "radio6-sb-aac",
+        .mode = pm_listening
+    },
+    {
+        .text = "BNR nieuwsradio",
+        .host = "icecast-bnr.cdp.triple-it.nl",
+        .port = 80,
+        .mount = "bnr_aac_32_04",
+        .mode = pm_listening
+    },
+    {
+        .text = "Absolute Radio UK",
+        .host = "aacplus-ac-32.timlradio.co.uk",
+        .port = 80,
+        .mount = "/",
+        .mode = pm_listening
+    }
 };
 
 const uint32_t max_channels = sizeof(channels) / sizeof(channels[0]);
@@ -157,6 +167,7 @@ uint8_t WIZ_SPI_ReadByte(void);
 uint8_t WIZ_SPI_SendByte(uint8_t byte);
 
 uint8_t do_http_get(uint8_t sn, const char *url, void (writefunc)(const char *buf, uint32_t len));
+uint8_t get_stream_from_server(uint8_t sn, const char *host, const uint8_t *ip, const uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status);
 
 struct {
     queue_hdr_t hdr; // must be named "hdr"
@@ -177,11 +188,13 @@ char AssertStringBuffer[16];
 
 lcd_context_t LCD; // make a context
 
-jack_ringbuffer_t *streambuffer; // used for audio encoding, IRQ handler will put stuff there
+jack_ringbuffer_t *streambuffer; // used for audio encoding, and playout, IRQ handler will put stuff there
 volatile uint32_t recorder_active_flag = 0; // put stuff in ringbuffer flag
 volatile uint32_t change_status = 0; // put a 1 here and the device will check for a new role to play, after accepting it will set this flag to 0
 volatile uint32_t active_channel = 0; // index of active channel
 static uint32_t menu_channel = 0; // index of channel menu is showing
+volatile uint32_t player_active_flag = 0; // the player can consume stuff now
+volatile uint32_t player_running = 0; // the player is running, do not destroy the ringbuffer
 
 static uint8_t playout_volume = 64;
 /*default volume */
@@ -203,7 +216,8 @@ de interrupt handler zorgt ervoor dat de buffer vanzelf
 verstuurd wordt zonder dat dit tijd kost in het programma
 Als de buffer vol is worden de tekens zomaar weggegooid, jammer dan.
  */
-void SERIAL_puts(const char *s) {
+void SERIAL_puts(const char *s)
+{
     while (*s) {
         if (!QUEUE_FULL(my_TX_queue)) {
             // er is ruimte, stop teken in de queue
@@ -221,7 +235,8 @@ void SERIAL_puts(const char *s) {
     USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
-void SERIAL_write(const char *s, uint32_t len) {
+void SERIAL_write(const char *s, uint32_t len)
+{
     while (len) {
         if (!QUEUE_FULL(my_TX_queue)) {
             // er is ruimte, stop teken in de queue
@@ -240,8 +255,11 @@ void SERIAL_write(const char *s, uint32_t len) {
     USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
-/* read audio bytes from the encoder over USART1, ALL USART1 interrupts */
-void USART1_IRQHandler(void) {
+/* read audio bytes from the encoder over USART1, ALL USART1 interrupts
+ * maximum freq about 25000 Hz called, 256kbps stream
+ */
+void USART1_IRQHandler(void)
+{
     /* if Receive Register not empty then get byte */
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
         /* get byte */
@@ -259,7 +277,8 @@ void USART1_IRQHandler(void) {
 }
 
 // this is the interrupt request handler (IRQ) for ALL USART2 interrupts
-void USART2_IRQHandler(void) {
+void USART2_IRQHandler(void)
+{
     /* if Receive Register not empty then get byte */
     if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
         uint8_t ch = USART2->DR;
@@ -306,32 +325,33 @@ void ADC_IRQHandler(void)
 }
 #endif
 
-static void handle_menu_channels(uint8_t key) {
+static void handle_menu_channels(uint8_t key)
+{
     int n = menu_channel; // get global var
     /* kanaal selectie */
     switch (key) {
 
-        case 'D' :
-            if (n < max_channels - 1) {
-                n++;
-            } else {
-                n = 0;
-            }
-            break;
-        case 'U' :
-            if (n > 0) {
-                n--;
-            } else {
-                n = max_channels - 1;
-            }
-            break;
+    case 'D' :
+        if (n < max_channels - 1) {
+            n++;
+        } else {
+            n = 0;
+        }
+        break;
+    case 'U' :
+        if (n > 0) {
+            n--;
+        } else {
+            n = max_channels - 1;
+        }
+        break;
 
-        case 'S' : /* select */
-            /* set channel */
-            active_channel = n;
-            /* set flag */
-            change_status = 1;
-            break;
+    case 'S' : /* select */
+        /* set channel */
+        active_channel = n;
+        /* set flag */
+        change_status = 1;
+        break;
     }
     menu_channel = n; // update global var
 
@@ -354,22 +374,23 @@ static void handle_menu_channels(uint8_t key) {
     }
 }
 
-static void handle_menu_volume(uint8_t key) {
+static void handle_menu_volume(uint8_t key)
+{
     /* volume */
     uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
 
     switch (key) {
 
-        case 'D' :
-            if (n < 254) {
-                n++;
-            }
-            break;
-        case 'U' :
-            if (n > 0) {
-                n--;
-            }
-            break;
+    case 'D' :
+        if (n < 254) {
+            n++;
+        }
+        break;
+    case 'U' :
+        if (n > 0) {
+            n--;
+        }
+        break;
     }
     playout_volume = n;
 
@@ -386,7 +407,8 @@ static void handle_menu_volume(uint8_t key) {
 }
 
 
-static void handle_menu_key(uint8_t key) {
+static void handle_menu_key(uint8_t key)
+{
     //static n = 0;
     static uint8_t kolom = 0;
     /* kolom 0 = channel selectie,
@@ -394,38 +416,39 @@ static void handle_menu_key(uint8_t key) {
      */
     /* left right is kolom */
     switch (key) {
-        case 'L' :
-            if (kolom == 1) {
-                kolom = 0;
-            } else {
-                kolom = 1;
-            }
-            break;
-        case 'R' :
-            if (kolom == 0) {
-                kolom = 1;
-            } else {
-                kolom = 0;
-            }
-            break;
+    case 'L' :
+        if (kolom == 1) {
+            kolom = 0;
+        } else {
+            kolom = 1;
+        }
+        break;
+    case 'R' :
+        if (kolom == 0) {
+            kolom = 1;
+        } else {
+            kolom = 0;
+        }
+        break;
     }
 
 
     switch (kolom) {
-        case 0 :
-            /* channel select */
-            handle_menu_channels(key);
-            break;
-        case 1:
-            /* volume instellen */
-            handle_menu_volume(key);
-            break;
+    case 0 :
+        /* channel select */
+        handle_menu_channels(key);
+        break;
+    case 1:
+        /* volume instellen */
+        handle_menu_volume(key);
+        break;
 
     }
 
 }
 
-static void vTaskUserInterface(void *arg) {
+static void vTaskUserInterface(void *arg)
+{
     lcd_init_context(&LCD); // put values in the context
     lcd_init_gpio(&LCD); // init the gpio
     lcd_set_cursor_position(&LCD, 0, 0);
@@ -450,43 +473,43 @@ static void vTaskUserInterface(void *arg) {
         uint8_t key = val2key(val); // lookup de ADC naar key
         //xprintf("%c %d %d\r\n",key,prev_key,keystate,next_state);
         switch (keystate) {
-            case 0:
+        case 0:
 
-                if (key != '-') {
-                    /* a key was pressed*/
-                    prev_key = key;
-                    if (slowkey) {
-                        next_state = 1; // fast keys to to state 2, for slow keys go to state 1
-                    } else {
-                        SERIAL_write(&key, 1);
-                        handle_menu_key(key);
-                        next_state = 2; // go to state 2, skip confirmation on ADC
-                    }
+            if (key != '-') {
+                /* a key was pressed*/
+                prev_key = key;
+                if (slowkey) {
+                    next_state = 1; // fast keys to to state 2, for slow keys go to state 1
                 } else {
-                    next_state = 0; // wait for key again
-                }
-                break;
-
-            case 1:
-                if (key == prev_key) {
-                    /* same value 2nd time, accept key */
                     SERIAL_write(&key, 1);
                     handle_menu_key(key);
-                    next_state = 2;
-                } else {
-                    // not same key
-                    next_state = 0;
+                    next_state = 2; // go to state 2, skip confirmation on ADC
                 }
-                break;
+            } else {
+                next_state = 0; // wait for key again
+            }
+            break;
 
-            case 2:
-                if (key == prev_key) {
-                    next_state = 2; /* hang here until other value appears */
-                } else {
-                    /* wait for keypress again */
-                    next_state = 0;
-                }
-                break;
+        case 1:
+            if (key == prev_key) {
+                /* same value 2nd time, accept key */
+                SERIAL_write(&key, 1);
+                handle_menu_key(key);
+                next_state = 2;
+            } else {
+                // not same key
+                next_state = 0;
+            }
+            break;
+
+        case 2:
+            if (key == prev_key) {
+                next_state = 2; /* hang here until other value appears */
+            } else {
+                /* wait for keypress again */
+                next_state = 0;
+            }
+            break;
         }
 
         keystate = next_state;
@@ -495,7 +518,8 @@ static void vTaskUserInterface(void *arg) {
     }
 }
 
-static uint32_t wiz_hardware_reset_chip() {
+static uint32_t wiz_hardware_reset_chip()
+{
     // reset the chip, pull RSn low and release
     GPIO_WriteBit(GPIOA, GPIO_Pin_12, 0); // RESET
     vTaskDelay(1); // minimaal 500 us
@@ -515,12 +539,17 @@ static uint32_t wiz_hardware_reset_chip() {
         // timeout in reset van de wizchip handle dit later
         SERIAL_puts("Wiz Reset Timeout");
         return -1; // error
+    } else {
+        /* dat werkte dus goed */
+        wiz_NetTimeout xx = { .retry_cnt = 0x08, .time_100us = 0x07d0 };
+        ctlnetwork( CN_SET_TIMEOUT, &xx);
     }
     return 0; // ok
 }
 
 /* USART1 connects to Vs1063, pins PB6 (not used) and PB7 */
-void USART1_hardware_init(uint32_t baudrate) {
+void USART1_hardware_init(uint32_t baudrate)
+{
     GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO pins used as TX and RX
     USART_InitTypeDef USART_InitStruct; // this is for the USART1 initialization
     NVIC_InitTypeDef NVIC_InitStructure; // this is used to configure the NVIC (nested vector interrupt controller)
@@ -578,7 +607,8 @@ void USART1_hardware_init(uint32_t baudrate) {
 }
 
 /* debug info on USART 2 connected to USB */
-void USART2_hardware_init(uint32_t baudrate) {
+void USART2_hardware_init(uint32_t baudrate)
+{
     GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO pins used as TX and RX
     USART_InitTypeDef USART_InitStruct; // this is for the USART2 initialization
     NVIC_InitTypeDef NVIC_InitStructure; // this is used to configure the NVIC (nested vector interrupt controller)
@@ -623,7 +653,8 @@ void USART2_hardware_init(uint32_t baudrate) {
     USART_Cmd(USART2, ENABLE); //Enable USART2
 }
 
-void init_Wiz_SPI_GPIO(void) {
+void init_Wiz_SPI_GPIO(void)
+{
     // de wiznet zit op SPI 1
 
     // en de CS zit op PA13 (out)
@@ -682,7 +713,7 @@ void init_Wiz_SPI_GPIO(void) {
     SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low; // clock is low when idle
     SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge; // data sampled at first edge
     SPI_InitStruct.SPI_NSS = SPI_NSS_Soft; // set the NSS to software
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4; // 56; // SPI frequency is
+    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4; // SPI_BaudRatePrescaler_4; // 56; // SPI frequency is
     SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB; // data is transmitted MSB first
     SPI_Init(SPI1, &SPI_InitStruct);
 
@@ -690,21 +721,25 @@ void init_Wiz_SPI_GPIO(void) {
 
 }
 
-void wiz_chip_select(void) {
+void wiz_chip_select(void)
+{
     // PA11 modify for your hardware
     GPIO_WriteBit(GPIOA, GPIO_Pin_11, 0);
 }
 
-void wiz_chip_deselect(void) {
+void wiz_chip_deselect(void)
+{
     // PA11 modify for your hardware
     GPIO_WriteBit(GPIOA, GPIO_Pin_11, 1);
 }
 
-void wizchip_lock(void) {
+void wizchip_lock(void)
+{
     xSemaphoreTake(xSemaphoreWIZCHIP, 5000);
 }
 
-void wizchip_unlock(void) {
+void wizchip_unlock(void)
+{
     xSemaphoreGive(xSemaphoreWIZCHIP);
 }
 
@@ -714,7 +749,8 @@ void wizchip_unlock(void) {
 * @retval Byte Read from the SPI .
 */
 
-uint8_t WIZ_SPI_ReadByte(void) {
+uint8_t WIZ_SPI_ReadByte(void)
+{
     return (WIZ_SPI_SendByte(0));
 }
 
@@ -724,7 +760,8 @@ uint8_t WIZ_SPI_ReadByte(void) {
 * @param  byte: byte to send.
 * @retval The value of the received byte.
 */
-uint8_t WIZ_SPI_SendByte(uint8_t byte) {
+uint8_t WIZ_SPI_SendByte(uint8_t byte)
+{
     /*!< Loop while DR register in not empty */
     while (SPI_I2S_GetFlagStatus(WIZNET_SPI, SPI_I2S_FLAG_TXE) == RESET);
 
@@ -739,7 +776,8 @@ uint8_t WIZ_SPI_SendByte(uint8_t byte) {
 }
 
 
-static void vTaskDHCP(void *arg) {
+static void vTaskDHCP(void *arg)
+{
     /* de netwerk config moet uit een eeprom komen, mogeljk later een 24c32 erbij bakken op de i2c bus */
 
     uint32_t netconfig = NETINFO_DHCP; /* NETINFO_STATIC */
@@ -749,17 +787,20 @@ static void vTaskDHCP(void *arg) {
 
     /* netwerk buffer sizes per socket */
     uint8_t buffsizes[2][8] = {
-            {2, 2, 2, 2, 2, 2, 2, 2},
-            {2, 2, 2, 2, 2, 2, 2, 2}
+        // {2, 2, 2, 2, 2, 2, 2, 2},
+        // {2, 2, 2, 2, 2, 2, 2, 2}
+        {4, 4, 4, 4, 0, 0, 0, 0},
+        {4, 4, 4, 4, 0, 0, 0, 0}
+
     };
 
     wiz_NetInfo ni = { // new network info, we copy the MAC from eeprom
-            .mac = {0, 0, 0, 0, 0, 0},
-            .ip =  {192, 168, 1, 3},
-            .sn =  {255, 255, 255, 0},
-            .gw =  {192, 168, 1, 1},
-            .dns = {8, 8, 8, 8},
-            .dhcp = 1 // 1=static 2=dhcp 0=undefined
+        .mac = {0, 0, 0, 0, 0, 0},
+        .ip =  {192, 168, 1, 3},
+        .sn =  {255, 255, 255, 0},
+        .gw =  {192, 168, 1, 1},
+        .dns = {8, 8, 8, 8},
+        .dhcp = 1 // 1=static 2=dhcp 0=undefined
     };
 
     /* hardware initialisatie */
@@ -769,8 +810,8 @@ static void vTaskDHCP(void *arg) {
     reg_wizchip_cris_cbfunc(wizchip_lock, wizchip_unlock);
     reg_wizchip_cs_cbfunc(wiz_chip_select, wiz_chip_deselect);
     reg_wizchip_spi_cbfunc(WIZ_SPI_ReadByte, /* read single byte */
-            WIZ_SPI_SendByte /* send single byte */
-    );
+                           WIZ_SPI_SendByte /* send single byte */
+                          );
 
     /* reset w550io hardware module, dit laadt de defaults */
     wiz_hardware_reset_chip();
@@ -910,13 +951,15 @@ static void vTaskDHCP(void *arg) {
     }
 }
 
-void vTimerCallback(void *ptr) {
+void vTimerCallback(void *ptr)
+{
     DHCP_time_handler();
     DNS_time_handler();
     /* add music player timers here too ? */
 }
 
-uint8_t VS_Get_Serial_Byte(void) {
+uint8_t VS_Get_Serial_Byte(void)
+{
     while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET) {
         /* spin here */
     };
@@ -925,7 +968,8 @@ uint8_t VS_Get_Serial_Byte(void) {
     return (t);
 }
 
-uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status) {
+uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status)
+{
     uint8_t host_ip[] = {0, 0, 0, 0};
     //uint8_t mijn_dns[] = { 0,0,0,0 };
     uint8_t mijn_dns[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}};
@@ -960,9 +1004,9 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
     }
 
 
-    rv = socket(2, Sn_MR_TCP, 32000 + xTaskGetTickCount(), 0); // must be random number
+    rv = socket(sn, Sn_MR_TCP, 32000 + xTaskGetTickCount(), SF_TCP_NODELAY); // must be random number
     xprintf("sock=%d\r\n", rv);
-    rv = connect(2, host_ip, port);
+    rv = connect(sn, host_ip, port);
     xprintf("con=%d\r\n", rv);
 
     const uint16_t bufsize = 2048; // 8192; // size of buf in Wiznet voor deze socket
@@ -985,19 +1029,19 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
     base64encode(auth1, strlen(auth1), auth2, 256);
     int i;
     i = sprintf(buf, "SOURCE /%s ICE/1.0\r\n"
-                    "Content-Type: audio/mpeg\r\n"
-                    "Authorization: Basic %s\r\n"
-                    "User-Agent: WizStream1\r\n"
-                    "Ice-Public: 1\r\n"
-                    "Ice-Description: Streamsolution test channel 2\r\n"
-                    "Pragma: no-cache\r\n"
-                    "Cache-Control: no-cache, no-transform, private, no-store, proxy-revalidate\r\n\r\n", mntpnt, auth2
-    );
+                "Content-Type: audio/mpeg\r\n"
+                "Authorization: Basic %s\r\n"
+                "User-Agent: WizStream1\r\n"
+                "Ice-Public: 1\r\n"
+                "Ice-Description: Streamsolution test channel 2\r\n"
+                "Pragma: no-cache\r\n"
+                "Cache-Control: no-cache, no-transform, private, no-store, proxy-revalidate\r\n\r\n", mntpnt, auth2
+               );
 
     vPortFree(auth1);
     vPortFree(auth2);
 
-    rv = send(2, buf, i);
+    rv = send(sn, buf, i);
 
     /* wait for server response, can be 200 = OK, 401=Bad password, 501 server error, 403 mount busy */
     /* HTTP/1.0 200 */
@@ -1148,17 +1192,27 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 }
 
 
-uint8_t send_stream(channel_t *p, volatile uint32_t *status) {
+uint8_t send_stream(channel_t *p, volatile uint32_t *status)
+{
     int8_t rx = stream_to_test_server(2, /* socket number */
-            p->host,  /* hostname */
-            p->port, /*port*/
-            p->mount, /*mountpoint*/
-            p->passw, /*password*/
-            status /* check here to stop streaming */
-    );
+                                      p->host,  /* hostname */
+                                      p->port, /*port*/
+                                      p->mount, /*mountpoint*/
+                                      p->passw, /*password*/
+                                      status /* check here to stop streaming */
+                                     );
 }
 
-uint8_t receive_stream(channel_t *p, uint32_t *status) {
+uint8_t receive_stream(channel_t *p, volatile uint32_t *status)
+{
+    int8_t rx = get_stream_from_server(2,p->host,p->ip,p->port,p->mount,p->passw,status);
+}
+
+uint8_t
+get_stream_from_server(uint8_t sn, const char *host, const uint8_t *ip, const uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status)
+{
+
+
     uint8_t host_ip[] = {0, 0, 0, 0};
 //   uint8_t mijn_dns[] = { 0,0,0,0 };
     int rv = 0;
@@ -1170,14 +1224,12 @@ uint8_t receive_stream(channel_t *p, uint32_t *status) {
     //  DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF ); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
     // do the request on given server
 
-    if (p->host == NULL) {
+    if (host == NULL) {
         /* use bare IP */
-        host_ip[0] = p->ip[0];
-        host_ip[1] = p->ip[1];
-        host_ip[2] = p->ip[2];
-        host_ip[3] = p->ip[3];
-
-
+        host_ip[0] = ip[0];
+        host_ip[1] = ip[1];
+        host_ip[2] = ip[2];
+        host_ip[3] = ip[3];
     } else {
 
         uint8_t mijn_dns[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}};
@@ -1194,7 +1246,7 @@ uint8_t receive_stream(channel_t *p, uint32_t *status) {
             // init dns request
             DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
             // do the request on given server
-            int8_t rvx = DNS_run(mijn_dns[dns_counter], p->host, host_ip);
+            int8_t rvx = DNS_run(mijn_dns[dns_counter], host, host_ip);
             if (rvx == 0) {
                 xprintf("ip=%3d.%3d.%3d.%3d\r\n", host_ip[0], host_ip[1], host_ip[2], host_ip[3]);
                 //vPortFree(buf_dns);
@@ -1225,58 +1277,169 @@ uint8_t receive_stream(channel_t *p, uint32_t *status) {
     }
 
 
-    rv = socket(2, Sn_MR_TCP, (2048 + xTaskGetTickCount()) & 0xFFFF, 0); // must be random number
+    rv = socket(sn, Sn_MR_TCP, (2048 + xTaskGetTickCount()) & 0xFFFF,/* SF_TCP_NODELAY*/ 0); // must be random number
+    uint8_t param=1;
+    setsockopt(sn,SO_KEEPALIVEAUTO,&param); // enable keepalive
+    param=8;
+    setsockopt(sn,SO_TOS,&param); // low delay
     xprintf("sock=%d\r\n", rv);
-    rv = connect(2, host_ip, p->port);
-    xprintf("con=%d\r\n", rv);
+    rv = connect(sn, host_ip, port);
+    xprintf("xcon=%d %s\r\n", rv, socket_error_to_string(rv));
     // rv = connect(2,host_ip,80);
     //  xprintf("con=%d\r\n",rv);
 
-    const uint16_t bufsize = 8192; // size of buf in Wiznet voor deze socket
+    const uint16_t bufsize = 2048; // size of buf in Wiznet voor deze socket
 
     char *buf = pvPortMalloc(bufsize); // pak buf van systeem
+    if (buf == NULL) {
+        goto cleanup;
+    }
+
     // "GET /radio1-sb-aac HTTP/1.1\r\n" /* radio1-sb-aac  radio2-sb-aac 3 4 etc */
     int i;
     i = sprintf(buf, "GET /%s HTTP/1.1\r\n"
-            //   "GET /live128 HTTP/1.1\r\n"
-            "Host: %s\r\n"
-            "User-Agent: VLC/2.0.8 LibVLC/2.0.8\r\n"
-            "Range: bytes=0-\r\n"
-            "Connection: close\r\n"
-            "Icy-MetaData: 0\r\n\r\n", p->mount, p->host);
+                //   "GET /live128 HTTP/1.1\r\n"
+                "Host: %s\r\n"
+                "User-Agent: VLC/2.0.8 LibVLC/2.0.8\r\n"
+                "Range: bytes=0-\r\n"
+                "Connection: close\r\n"
+                "Icy-MetaData: 0\r\n\r\n", mntpnt, host);
 
-    rv = send(2, buf, i);
+    // xprintf("%s",buf);
+
+    rv = send(sn, buf, i);
     xprintf("send=%d\r\n", rv);
     // skip header TODO TODO
+    streambuffer = jack_ringbuffer_create(65535); // global variable
+    // failed to create streambuffer
+    if (streambuffer == NULL) {
+        goto cleanup;
+    }
 
     int32_t got_bytes;
+    uint32_t error = 0;
+
+    /* while we need to play this station continue */
     do {
 
         if (*status) {
             break;
         }
 
-        got_bytes = recv(2, buf, bufsize);
-        // xprintf("b=%d\r\n",got_bytes);
-        SERIAL_puts(".");
-        if (got_bytes > 0) {
-            VS_SDI_Write_Buffer(buf, got_bytes);
-        } else if (got_bytes < 0) {
-            // error
-            SERIAL_puts("error\r\n");
+        // hoeveel data kunnen we handlen?
+        // als ruimte in buffer dan verder
 
+        uint32_t bf = jack_ringbuffer_write_space(streambuffer);
+        uint32_t read_this_many;
+        if (bufsize < bf) {
+            // read max buffer size if we have space
+            read_this_many = bufsize;
         } else {
-            // 0 bytes
-            // end of data
-            SERIAL_puts("end\r\n");
-
+            // read available space maximal
+            read_this_many = bf;
         }
-    } while (got_bytes > 0);
+
+        if (read_this_many == 0) {
+            // de buffer is vol, we moeten even niet lezen
+            taskYIELD(); // geef de consumer ruimte
+        } else {
+
+            xprintf("still free: %u %u\r\n",jack_ringbuffer_write_space(streambuffer),read_this_many);
+            got_bytes = recv(sn, buf, read_this_many);
+
+            if (got_bytes > 0) {
+                // put into ring buffer
+                //
+                if (jack_ringbuffer_write_space(streambuffer) >= got_bytes) {
+                    uint32_t stuffed = jack_ringbuffer_write(streambuffer,buf,got_bytes);
+                    if (stuffed < got_bytes) {
+                        // corruption
+                        xprintf("FATAL corruption\r\n");
+                    }
+                    player_active_flag = 1;
+                    taskYIELD(); // geef de consumer ruimte
+                } else {
+                    // no space in buffer get out
+                    taskYIELD();
+                }
+            } else {
+                // network error or end of stream
+                error=1;
+            }
+        }
+    } while (error == 0);
+
+    player_active_flag=0; // stop playout
+
+    // wait for player to finish
+
+    while (player_running == 1) {
+        taskYIELD();
+    }
+
+cleanup:
+
     vPortFree(buf); // en terug aan systeem
-    close(2);
+    player_active_flag=0; // stop playout
+    if (streambuffer != NULL) {
+        jack_ringbuffer_free(streambuffer);
+    }
+
+    close(sn);
 }
 
-void vTaskApplication(void *pvParameters) {
+void vTaskPlayer(void *pvParameters)
+{
+    // wait for playout
+    // uint32_t we_are_playing = 0;
+    uint8_t *buf;
+    const uint32_t bufsize = 2048;
+    buf=pvPortMalloc(bufsize);
+    if (buf==NULL) {
+        xprintf("out of memory XXX");
+        goto cleanup;
+    }
+
+    while (1) {
+
+        if (player_active_flag) {
+            // get stuff from ringbuffer and push it to the vs1063
+            // we changed state
+            if (player_running == 0) {
+                // we started now
+
+                // init the vs1063 if needed
+                player_running = 1; // we own the ringbuffer now
+
+            }
+            // get stuff and push to chip
+            uint32_t bc = jack_ringbuffer_read(streambuffer,buf,bufsize);
+            VS_SDI_Write_Buffer(buf, bc);
+
+        } else {
+            if (player_running) {
+                // cleanup
+                player_running = 0;
+                uint32_t tmp = jack_ringbuffer_read_space(streambuffer);
+                jack_ringbuffer_read_advance(streambuffer,tmp);
+                // flush zero's to vs1063
+                // signal other tasks we are NOT using the ringbuffer
+            }
+
+            // sleep
+            taskYIELD();
+        }
+
+    }
+
+cleanup:
+    xprintf("TaskPlayout DEAD\r\n");
+
+}
+
+
+void vTaskApplication(void *pvParameters)
+{
     /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */
 
     EventBits_t xx = xEventGroupWaitBits(xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY);
@@ -1320,7 +1483,8 @@ void vTaskApplication(void *pvParameters) {
     }
 }
 
-int main(void) {
+int main(void)
+{
     // RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_RNG, ENABLE);
     //  RNG_Cmd(ENABLE);
 
@@ -1394,9 +1558,11 @@ int main(void) {
 //   xTaskCreate(vTask1, "Ben_Thread", 256, NULL, 0, NULL);
     xTaskCreate(vTaskUserInterface, "Theo_Thread", 256, NULL, 0, NULL);
     xTaskCreate(vTaskApplication, "App", 512, NULL, 0, NULL);
+    xTaskCreate(vTaskPlayer,"PlayOut",512,NULL,0,NULL);
 
     xTaskCreate(vTaskDHCP, "DHCP", 256, NULL, 0, NULL); /* stack must be large or crash will happen */
     // assert_failed("Test 1235", 8888);
+
     vTaskStartScheduler();
     /* Infinite loop */
 
@@ -1408,7 +1574,8 @@ int main(void) {
 
 /* called when stack is about to crash */
 void vApplicationStackOverflowHook(TaskHandle_t xTask,
-        signed char *pcTaskName) {
+                                   signed char *pcTaskName)
+{
     /* hang here so we can attach a debugger to find out what happened */
     for (; ;);
 }

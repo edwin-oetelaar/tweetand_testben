@@ -366,14 +366,14 @@ typedef enum {
     SO_TOS,              ///< Set/Get TOS. @ref Sn_TOS  ( @ref setSn_TOS(), @ref getSn_TOS() )
     SO_MSS,              ///< Set/Get MSS. @ref Sn_MSSR ( @ref setSn_MSSR(), @ref getSn_MSSR() )
     SO_DESTIP,           ///< Set/Get the destination IP address. @ref Sn_DIPR ( @ref setSn_DIPR(), @ref getSn_DIPR() )
-    SO_DESTPORT,         ///< Set/Get the destionation Port number. @ref Sn_DPORT ( @ref setSn_DPORT(), @ref getSn_DPORT() )
+    SO_DESTPORT,         ///< Set/Get the destination Port number. @ref Sn_DPORT ( @ref setSn_DPORT(), @ref getSn_DPORT() )
 #if _WIZCHIP_ != 5100
     SO_KEEPALIVESEND,    ///< Valid only in setsockopt. Manually send keep-alive packet in TCP mode
 #if _WIZCHIP_ > 5200
-    SO_KEEPALIVEAUTO, ///< Set/Get keep-alive auto transmittion timer in TCP mode
+    SO_KEEPALIVEAUTO, ///< Set/Get keep-alive auto transmission timer in TCP mode
 #endif
 #endif
-    SO_SENDBUF,          ///< Valid only in getsockopt. Get the free data size of Socekt TX buffer. @ref Sn_TX_FSR, @ref getSn_TX_FSR()
+    SO_SENDBUF,          ///< Valid only in getsockopt. Get the free data size of Socket TX buffer. @ref Sn_TX_FSR, @ref getSn_TX_FSR()
     SO_RECVBUF,          ///< Valid only in getsockopt. Get the received data size in socket RX buffer. @ref Sn_RX_RSR, @ref getSn_RX_RSR()
     SO_STATUS,           ///< Valid only in getsockopt. Get the socket status. @ref Sn_SR, @ref getSn_SR()
     SO_REMAINSIZE,       ///< Valid only in getsockopt. Get the remained packet size in other then TCP mode.
