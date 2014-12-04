@@ -9,6 +9,8 @@
  */
 
 #include "socket.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #define SOCK_ANY_PORT_NUM  0xC000;
 
 static uint16_t sock_any_port = SOCK_ANY_PORT_NUM;
@@ -276,7 +278,7 @@ int32_t send(uint8_t sn, const void *buf, uint16_t len)
 }
 
 /* API function to receive data */
-int32_t recv(uint8_t sn, void *buf, uint16_t len)
+int32_t recv(uint8_t sn, void *buf, uint16_t len, const uint32_t timeout_ms)
 {
     uint8_t tmp = 0;
     uint16_t recvsize = 0;
@@ -290,30 +292,47 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
         len = recvsize; // can never receive more than buffer size
     }
 
+    TickType_t tstart = xTaskGetTickCount(); // start the timer, get value of now
+
     while (1) {
         recvsize = getSn_RX_RSR(sn); // how many in RX buffer of chip
         tmp = getSn_SR(sn); // get status of socket
         if (tmp != SOCK_ESTABLISHED) {
+            // not an established connection, error or not, are we closing
             if (tmp == SOCK_CLOSE_WAIT) {
+                /* socket is closing, data still present, return last chunk */
                 if (recvsize != 0) {
                     break;
                 } else if (getSn_TX_FSR(sn) == getSn_TxMAX(sn)) {
+                    /* 0 bytes remaining, buffers all free, all is well */
                     close(sn);
                     return 0; /* fix: This is not an ERROR, this is normal shutdown*/
                 }
             } else {
+                // some other status, error
                 close(sn);
                 return -1; /* on error return -1 not -7 WTF: SOCKERR_SOCKSTATUS */
             }
         }
 
+        // handle non-blocking case
         if ((sock_io_mode & (1 << sn)) && (recvsize == 0)) {
             return SOCK_BUSY;
         }
 
+        // we got something, out of here
         if (recvsize != 0) {
             break;
         }
+
+        if (timeout_ms > 0) {
+            // use timeout if value given >0
+            if (( xTaskGetTickCount() - tstart) > timeout_ms) {
+                // timeout, no data in time
+                return(SOCKERR_TIMEOUT); //
+            }
+        }
+        taskYIELD(); // we did nothing here, give time to other tasks before we check registers again
     }
 
     if (recvsize < len) {
@@ -322,8 +341,10 @@ int32_t recv(uint8_t sn, void *buf, uint16_t len)
 
     wiz_recv_data(sn, buf, len); // copy data from chip into buffer
     setSn_CR(sn, Sn_CR_RECV); // set control to receive
+    /* wait for chip to acknowledge */
     while (getSn_CR(sn)) {
         /* nop nop*/
+        taskYIELD(); // give someone else time
     }; /* wait until the bit clears */
     return len;
 }
@@ -692,23 +713,52 @@ int8_t getsockopt(uint8_t sn, sockopt_type sotype, void *arg)
 }
 #if 0
 /* print the socket error in human text */
-const char *err_to_str(int8_t err) {
-char *ptr = "undef";
+const char *err_to_str(int8_t err)
+{
+    char *ptr = "undef";
     switch (err) {
-        case SOCK_OK: ptr="SOCK_OK"; break;
-        case SOCKERR_SOCKNUM: ptr="SOCKERR_SOCKNUM"; break;
-        case SOCKERR_SOCKOPT: ptr="SOCKERR_SOCKOPT"; break;
-        case SOCKERR_SOCKINIT: ptr="SOCKERR_SOCKINIT"; break;
-        case SOCKERR_SOCKCLOSED: ptr="SOCKERR_SOCKCLOSED"; break;
-        case SOCKERR_SOCKMODE: ptr="SOCKERR_SOCKMODE"; break;
-        case SOCKERR_SOCKFLAG: ptr="SOCKERR_SOCKFLAG"; break;
-        case SOCKERR_SOCKSTATUS: ptr="SOCKERR_SOCKSTATUS"; break;
-        case SOCKERR_ARG: ptr="SOCKERR_ARG"; break;
-        case SOCKERR_PORTZERO: ptr="SOCKERR_PORTZERO"; break;
-        case SOCKERR_IPINVALID: ptr="SOCKERR_IPINVALID"; break;
-        case SOCKERR_TIMEOUT: ptr="SOCKERR_TIMEOUT"; break;
-        case SOCKERR_DATALEN: ptr="SOCKERR_DATALEN"; break;
-        case SOCKERR_BUFFER: ptr="SOCKERR_BUFFER"; break;
+    case SOCK_OK:
+        ptr="SOCK_OK";
+        break;
+    case SOCKERR_SOCKNUM:
+        ptr="SOCKERR_SOCKNUM";
+        break;
+    case SOCKERR_SOCKOPT:
+        ptr="SOCKERR_SOCKOPT";
+        break;
+    case SOCKERR_SOCKINIT:
+        ptr="SOCKERR_SOCKINIT";
+        break;
+    case SOCKERR_SOCKCLOSED:
+        ptr="SOCKERR_SOCKCLOSED";
+        break;
+    case SOCKERR_SOCKMODE:
+        ptr="SOCKERR_SOCKMODE";
+        break;
+    case SOCKERR_SOCKFLAG:
+        ptr="SOCKERR_SOCKFLAG";
+        break;
+    case SOCKERR_SOCKSTATUS:
+        ptr="SOCKERR_SOCKSTATUS";
+        break;
+    case SOCKERR_ARG:
+        ptr="SOCKERR_ARG";
+        break;
+    case SOCKERR_PORTZERO:
+        ptr="SOCKERR_PORTZERO";
+        break;
+    case SOCKERR_IPINVALID:
+        ptr="SOCKERR_IPINVALID";
+        break;
+    case SOCKERR_TIMEOUT:
+        ptr="SOCKERR_TIMEOUT";
+        break;
+    case SOCKERR_DATALEN:
+        ptr="SOCKERR_DATALEN";
+        break;
+    case SOCKERR_BUFFER:
+        ptr="SOCKERR_BUFFER";
+        break;
     }
     return ptr;
 }

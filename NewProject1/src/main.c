@@ -26,141 +26,14 @@
 #include "vs10xx.h"
 #include "ringbuffer.h"
 #include "wizchip_conf.h"
+#include "kanalenlijst.h"
 
 #define min(a, b) (((a)<(b))?(a):(b))
 static const char zeroes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+// extern channel_t channels[]; /* global channel list */
 
-typedef enum {
-    pm_listening = 0, pm_sending = 1, pm_intercom = 2
-} playermode_t;
-
-typedef struct {
-    const char *text;
-    /* text on lcd display */
-    const char *host;
-    /* hostname on internet */
-    const uint8_t ip[4];
-    /* bare ip when not using hostname, set host=NULL */
-    const uint32_t port;
-    /* port number of service */
-    const char *mount;
-    /* mount point */
-    const char *passw;
-    /* password for ice cast */
-    const playermode_t mode; /* listen or send */
-} channel_t;
-
-static const channel_t channels[] = {
-    {
-        .text = "Radio Arrow 1",
-        .host = NULL,
-        .ip =
-        {91,221,151,156},
-        .port = 80,
-        .mount = "",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio Arrow 2",
-        .host = NULL,
-        .ip =
-        {91,221,151,178},
-        .port = 9109,
-        .mount = "",
-        .mode = pm_listening
-    },
-    {
-        .text = "Test Channel1 RX",  /* luisteren naar eigen uitzendingen */
-        .host = "s1.streamsolution.nl",
-        .ip = {0, 0, 0, 0},
-        .port = 8000,
-        .mount = "test",
-        .mode = pm_listening
-    },
-    {
-        .text = "Test Channel2 RX",  /* luisteren naar eigen uitzendingen */
-        .host = "s1.streamsolution.nl",
-        .ip = {0, 0, 0, 0},
-        .port = 8000,
-        .mount = "test2",
-        .mode = pm_listening
-    },
-    {
-        .text = "Trans Chan Test ",
-        .host = "s1.vergadering-gemist.nl",
-        .port = 8000,
-        .mount = "test",
-        .passw = "test",
-        .mode = pm_sending
-    },
-    {
-        .text = "Trans Chan Test2",
-        .host = "s1.vergadering-gemist.nl",
-        .port = 8000,
-        .mount = "test2",
-        .passw = "test",
-        .mode = pm_sending
-    },
-    {
-        .text = "Radio 1 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "radio1-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio 2 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "radio2-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio 3 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "3fm-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio 4 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "radio4-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio 5 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "radio5-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "Radio 6 AAC 32kb",
-        .host = "icecast.omroep.nl",
-        .port = 80,
-        .mount = "radio6-sb-aac",
-        .mode = pm_listening
-    },
-    {
-        .text = "BNR nieuwsradio",
-        .host = "icecast-bnr.cdp.triple-it.nl",
-        .port = 80,
-        .mount = "bnr_aac_32_04",
-        .mode = pm_listening
-    },
-    {
-        .text = "Absolute Radio UK",
-        .host = "aacplus-ac-32.timlradio.co.uk",
-        .port = 80,
-        .mount = "/",
-        .mode = pm_listening
-    }
-};
-
-const uint32_t max_channels = sizeof(channels) / sizeof(channels[0]);
+// const uint32_t max_channels = sizeof(channels) / sizeof(channels[0]);
 
 uint8_t WIZ_SPI_ReadByte(void);
 
@@ -196,7 +69,9 @@ static uint32_t menu_channel = 0; // index of channel menu is showing
 volatile uint32_t player_active_flag = 0; // the player can consume stuff now
 volatile uint32_t player_running = 0; // the player is running, do not destroy the ringbuffer
 
-static uint8_t playout_volume = 64;
+static uint8_t playout_volume = 5;
+const uint8_t auto_start_first_channel = 1; // make music on startup
+
 /*default volume */
 
 
@@ -332,7 +207,7 @@ static void handle_menu_channels(uint8_t key)
     switch (key) {
 
     case 'D' :
-        if (n < max_channels - 1) {
+        if (n < kl_get_count() - 1) {
             n++;
         } else {
             n = 0;
@@ -342,7 +217,7 @@ static void handle_menu_channels(uint8_t key)
         if (n > 0) {
             n--;
         } else {
-            n = max_channels - 1;
+            n = kl_get_count() - 1;
         }
         break;
 
@@ -355,7 +230,7 @@ static void handle_menu_channels(uint8_t key)
     }
     menu_channel = n; // update global var
 
-    const channel_t *p = channels + n; // magic
+    const channel_t *p = kl_get_channel(n); // channels + n; // magic
 
     lcd_set_cursor_position(&LCD, 0, 0);
     lcd_write(&LCD, p->text, strlen(p->text));
@@ -467,6 +342,12 @@ static void vTaskUserInterface(void *arg)
     uint8_t prev_key = 0;
     uint8_t slowkey = 1; // double check ADC value
     handle_menu_key('-'); // initial screen
+
+    if (auto_start_first_channel == 1) {
+        // fake the press select button
+        SERIAL_write("Autostart\r\n",11);
+        handle_menu_key('S'); // S is Select
+    }
 
     for (; ;) {
         uint16_t val = adc_convert();
@@ -1067,7 +948,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         return -2;
     }
 
-    len = recv(sn, buf, bufsize);
+    len = recv(sn, buf, bufsize, 5000); // 5 sec timeout
 
     if (!strncmp(buf, "HTTP/1.0 200 ", 13)) {
         // ok
@@ -1344,8 +1225,8 @@ get_stream_from_server(uint8_t sn, const char *host, const uint8_t *ip, const ui
             taskYIELD(); // geef de consumer ruimte
         } else {
 
-            xprintf("still free: %u %u\r\n",jack_ringbuffer_write_space(streambuffer),read_this_many);
-            got_bytes = recv(sn, buf, read_this_many);
+            xprintf("still free: %" PRIu32 " %" PRIu32 "\r\n",jack_ringbuffer_write_space(streambuffer),read_this_many);
+            got_bytes = recv(sn, buf, read_this_many, 5000); // 5 sec timeout
 
             if (got_bytes > 0) {
                 // put into ring buffer
@@ -1464,7 +1345,7 @@ void vTaskApplication(void *pvParameters)
         /* check nieuwe task */
         if (change_status) {
             change_status = 0;
-            const channel_t *p = channels + active_channel;
+            const channel_t *p = kl_get_channel(active_channel);// channels + active_channel;
 
             if (p->mode == pm_listening) {
                 receive_stream(p, &change_status); // runs until change_status==1

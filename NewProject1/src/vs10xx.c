@@ -36,7 +36,8 @@ extern xSemaphoreHandle xSemaphoreWRAM;
 const uint8_t use_230400 = 0; /* 460800 otherwise when 0 */
 
 /* User application code loading tables for VS10xx */
-void LoadUserCode(void) {
+void LoadUserCode(void)
+{
     size_t i = 0;
     while (i < PLUGIN_SIZE) {
         unsigned short addr, n, val;
@@ -71,7 +72,8 @@ void LoadUserCode(void) {
  * SPI2_TX zit op DMA1_channel5
  * */
 
-void EXTI15_10_IRQHandler(void) {
+void EXTI15_10_IRQHandler(void)
+{
 #if 0
     static signed portBASE_TYPE xHigherPriorityTaskWoken;
     xprintf("INT11\n");
@@ -92,7 +94,8 @@ void EXTI15_10_IRQHandler(void) {
 #endif
 }
 
-void DMA1_Channel5_IRQHandler(void) {
+void DMA1_Channel5_IRQHandler(void)
+{
 #if 0
     static signed portBASE_TYPE xHigherPriorityTaskWoken;
     FlagStatus f = DMA_GetFlagStatus(DMA1_FLAG_TC5);
@@ -118,7 +121,8 @@ void DMA1_Channel5_IRQHandler(void) {
 #endif
 }
 
-static void DMA_MemToSPI2(const char *buff, uint32_t btr) {
+static void DMA_MemToSPI2(const char *buff, uint32_t btr)
+{
     // op de stm32f401ret zit spi2_tx channel0 op stream4 van dma1
 //http://www.st.com/st-web-ui/static/active/en/resource/technical/document/application_note/DM00046011.pdf
     DMA_InitTypeDef DMA_InitStruct;
@@ -167,7 +171,8 @@ static void DMA_MemToSPI2(const char *buff, uint32_t btr) {
 }
 
 
-void VS_SPI_GPIO_init(void) {
+void VS_SPI_GPIO_init(void)
+{
     // ok check op 31/7/2014
     // de VS1063 zit op SPI 2
 
@@ -244,14 +249,15 @@ void VS_SPI_GPIO_init(void) {
 
 }
 
-void VS_Registers_Init(void) {
+void VS_Registers_Init(void)
+{
     VS_Soft_Reset(DEFAULT_DIVIDER);
     // mode should be  0x4c20
     uint16_t regval = SM_SDINEW | // use SPI protocol
-            SM_TESTS | // enable tests via SDI
-            SM_LAYER12 | // enable mp3 layers
-            //  SM_LINE1   // use line input instead of mic */
-            SM_SDISHARE; // share xCS with xDCS
+                      SM_TESTS | // enable tests via SDI
+                      SM_LAYER12 | // enable mp3 layers
+                      //  SM_LINE1   // use line input instead of mic */
+                      SM_SDISHARE; // share xCS with xDCS
 
     // do a dummy read, make sure xCS etc are defined from example code..
     VS_Read_SCI(SCI_MODE); //
@@ -263,7 +269,8 @@ void VS_Registers_Init(void) {
 
 }
 
-void VS_Volume_Set(uint16_t vol) {
+void VS_Volume_Set(uint16_t vol)
+{
     VS_Write_SCI(SCI_VOL, vol);
 }
 
@@ -277,7 +284,8 @@ void VS_Volume_Set(uint16_t vol) {
  * - chip was reset using SPI commands return 0
  * - OR chip reset failed, return error code
  * */
-uint8_t VS_Soft_Reset(uint16_t _div_reg) {
+uint8_t VS_Soft_Reset(uint16_t _div_reg)
+{
     uint8_t rv = 0; // assume succes
 
     VS_Write_SCI(SCI_CLOCKF, _div_reg);
@@ -286,7 +294,7 @@ uint8_t VS_Soft_Reset(uint16_t _div_reg) {
         /* power down analog part, prevent plopping on reset */
         VS_Write_SCI(SCI_VOL, 0xFFFF);
         uint16_t regval = SM_SDINEW | SM_TESTS | SM_LAYER12 | SM_RESET
-                | SM_SDINEW /* | SM_LINE1 */ | SM_SDISHARE;
+                          | SM_SDINEW /* | SM_LINE1 */ | SM_SDISHARE;
 
         // set bit 2 of mode reg to 1 for reset
         VS_Write_SCI(SCI_MODE, regval);
@@ -312,20 +320,22 @@ uint8_t VS_Soft_Reset(uint16_t _div_reg) {
 
 }
 
-uint8_t VS_Dreq_Wait(const uint32_t timeout_ms) {
+uint8_t VS_Dreq_Wait(const uint32_t timeout_ms)
+{
     // short circuit
     uint8_t b = GPIO_ReadInputDataBit(VS_DREQ_PRT, VS_DREQ);
     if (b) {
         return 0;    // no timeout, done
     }
     // start with waiting
-    uint32_t start_time = xTaskGetTickCount();
-    uint32_t maxtime = start_time + timeout_ms; // max 1 second
-    uint8_t wrapped = 0;
-    if (start_time > maxtime) {
-        // maxtime wrapped arround
-        wrapped = 1;
-    }
+    TickType_t start_time = xTaskGetTickCount();
+
+    //uint32_t maxtime = start_time + timeout_ms; // max 1 second
+    //uint8_t wrapped = 0;
+    //if (start_time > maxtime) {
+    // maxtime wrapped arround
+    //    wrapped = 1;
+    //}
 
     uint8_t rv = 0;
     while (1) {
@@ -334,25 +344,14 @@ uint8_t VS_Dreq_Wait(const uint32_t timeout_ms) {
             // DREQ is high, good
             break;
         } else {
-            if (wrapped) {
-                // DREQ is still low, and maxtime is wrapped
-                uint32_t now = xTaskGetTickCount();
-                // timeout when time passed and start_time in future
-                if ((maxtime < now) && (start_time > now)) {
-                    // still low after maxtime, timeout
-                    rv = 1;
-                    break;
-                }
-            } else {
-                // DREQ is still low
-                if (maxtime < xTaskGetTickCount()) {
-                    // still low after maxtime, timeout
-                    rv = 1;
-                    break;
-                }
+            // check for timeout
+            if ((xTaskGetTickCount() - start_time ) > timeout_ms) {
+                rv=1;
+                break;
             }
         }
-        vTaskDelay(0);
+
+        taskYIELD();
     }
     return rv;
 }
@@ -369,7 +368,8 @@ uint8_t VS_Dreq_Wait(const uint32_t timeout_ms) {
  * 0 == success
  * else error code
  */
-uint8_t VS_Hard_Reset(void) {
+uint8_t VS_Hard_Reset(void)
+{
     uint8_t rv = 0; // assume succesful reset
     const uint8_t timeout = 100; // timeout after 100ms
     // deselect chip
@@ -407,7 +407,8 @@ uint8_t VS_Hard_Reset(void) {
 }
 
 /* write a single word to a (control) register inside the VS chip */
-void VS_Write_SCI(uint8_t reg, uint16_t w_data) {
+void VS_Write_SCI(uint8_t reg, uint16_t w_data)
+{
     // grab VS_xCS
     if (xSemaphoreTake(xSemaphoreSPI2, 5000)) {
         GPIO_ResetBits(VS_xCS_PRT, VS_xCS);
@@ -433,7 +434,8 @@ void VS_Write_SCI(uint8_t reg, uint16_t w_data) {
 * - read value of vs10xx chip register using SPI
 * - return value of register uint16_t
 */
-uint16_t VS_Read_SCI(uint8_t reg) {
+uint16_t VS_Read_SCI(uint8_t reg)
+{
 
     if (pdFALSE == xSemaphoreTake(xSemaphoreSPI2, 5000)) {
         xprintf("err sema spi2 wr sci\n");
@@ -460,7 +462,8 @@ uint16_t VS_Read_SCI(uint8_t reg) {
 /*
   Read 16-bit value from memory address.
 */
-uint16_t VS_Read_Mem(uint16_t addr) {
+uint16_t VS_Read_Mem(uint16_t addr)
+{
     if (pdFALSE == xSemaphoreTake(xSemaphoreWRAM, 100)) {
         xprintf("sema err WRAM rm");
         return 0xFFFF;
@@ -478,7 +481,8 @@ uint16_t VS_Read_Mem(uint16_t addr) {
   Because the 32-bit value can change while reading it,
   read MSB's twice and decide which is the correct one.
 */
-uint32_t VS_Read_mem32_counter(uint16_t addr) {
+uint32_t VS_Read_mem32_counter(uint16_t addr)
+{
     uint16_t msbV1, lsb, msbV2;
 
     if (pdFALSE == xSemaphoreTake(xSemaphoreWRAM, 100)) {
@@ -498,7 +502,8 @@ uint32_t VS_Read_mem32_counter(uint16_t addr) {
     }
 }
 
-uint32_t VS_Read_mem32(uint16_t addr) {
+uint32_t VS_Read_mem32(uint16_t addr)
+{
 
     if (pdFALSE == xSemaphoreTake(xSemaphoreWRAM, 100)) {
         xprintf("sema err WRAM rm32");
@@ -514,7 +519,8 @@ uint32_t VS_Read_mem32(uint16_t addr) {
 /*
   Write 16-bit value to given VS10xx memory address
 */
-void VS_Write_mem(uint16_t addr, uint16_t data) {
+void VS_Write_mem(uint16_t addr, uint16_t data)
+{
     if (pdFALSE == xSemaphoreTake(xSemaphoreWRAM, 100)) {
         xprintf("sema err WRAM wr");
     } else { // GRAB
@@ -528,7 +534,8 @@ void VS_Write_mem(uint16_t addr, uint16_t data) {
   Write 32-bit value to given VS10xx memory address
 */
 
-void VS_Write_mem32(uint16_t addr, uint32_t data) {
+void VS_Write_mem32(uint16_t addr, uint32_t data)
+{
     if (xSemaphoreTake(xSemaphoreWRAM, 100)) { // GRAB
         VS_Write_SCI(SCI_WRAMADDR, addr);
         VS_Write_SCI(SCI_WRAM, (uint16_t) data);
@@ -540,7 +547,8 @@ void VS_Write_mem32(uint16_t addr, uint32_t data) {
 }
 
 /* */
-void VS_Test_Sine(uint8_t onoff, uint8_t freq) {
+void VS_Test_Sine(uint8_t onoff, uint8_t freq)
+{
 #ifdef _VSDEBUG_
     xprintf("\r\nSine %s %d", onoff ? "ON" : "OFF", freq);
 #endif
@@ -575,7 +583,8 @@ void VS_Test_Sine(uint8_t onoff, uint8_t freq) {
     }
 }
 
-void SPI2_SendZeroBytes(uint8_t count, uint8_t b) {
+void SPI2_SendZeroBytes(uint8_t count, uint8_t b)
+{
     while (count) {
         VS_SPI_SendByte(b);
         count--;
@@ -589,7 +598,8 @@ void SPI2_SendZeroBytes(uint8_t count, uint8_t b) {
 * \return uint8_t
 *
 */
-uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len) {
+uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len)
+{
     uint16_t atonce;
     uint16_t sdiFree;
     //	uint16_t audioFill;
@@ -642,7 +652,8 @@ uint8_t VS_SDI_Write_Buffer(const char *ptr, uint16_t len) {
 // print some info to serial
 // pre: make sure that xSemaphoreWRAM is taken
 // or nothing can interrupt it
-void VS_Registers_Dump(void) {
+void VS_Registers_Dump(void)
+{
     /* read registers, dump contents  */
     // dit moet onder de WRAM mutex gebeuren TODO add mutex
     xprintf("\e[5;1H");
@@ -695,19 +706,22 @@ void VS_Registers_Dump(void) {
     //	vPortFree(p);
 }
 
-uint8_t VS_SPI_SendByte(uint8_t const byte) {
+uint8_t VS_SPI_SendByte(uint8_t const byte)
+{
     // send a byte to SPI2
     // pre: xSemaphoreSPI2 is taken
     // pre: the Chip Selects are set
     // post: data is clocked out, and received over SPI2
 
     /* wait for Transmit empty */
-    while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET) {; /* spin here */
+    while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET) {
+        ; /* spin here */
     }
     SPI_I2S_SendData(SPI2, byte);
 
     /* wait for receive not empty */
-    while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET) {; /* spin here */
+    while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET) {
+        ; /* spin here */
     }
     /* get value from register */
     uint16_t tmp = SPI_I2S_ReceiveData(SPI2);
@@ -737,23 +751,24 @@ static const enc_preset_t enc_presets[] = {{
         .max_agc_gain = 1024 * 16, /* max gain agc maximum */
         .rec_format = RM_63_FORMAT_MP3 | RM_63_ADC_MODE_MONO, /* mono mp3 */
         .mode_bitrate = RQ_MODE_CBR | RQ_MULT_1000 | 32  // 0xE010, /* CBR MP3 16Kbps */
-}, {
+    }, {
         .samplerate=48000U, /* 48k */
         .rec_volume=0x00,/* agc on */
         .max_agc_gain =  4096U,/* max gain agc 4x */
         .rec_format = 0x0060, /* stereo mp3*/
         .mode_bitrate = 0xE080, /* CBR MP3 128 Kbps */
-}, {
+    }, {
         .samplerate=  48000U,
         .rec_volume =  0,
         .max_agc_gain = 4096U,
         .rec_format = 0x0050 /* stereo ogg */,
         .mode_bitrate = 5 /* Q mode 5 */
 
-}
+    }
 };
 
-uint8_t VS_Encoder_Init(radio_player_t *rp) {
+uint8_t VS_Encoder_Init(radio_player_t *rp)
+{
     uint8_t rv = 1; // OK
     xprintf("encoding preset=%d\n", rp->encoding_preset);
     int i = rp->encoding_preset; /* number of the preset, niet de preset zelf */
@@ -829,7 +844,8 @@ uint8_t VS_Encoder_Init(radio_player_t *rp) {
 }
 
 
-void VS_cancel_stream(void) {
+void VS_cancel_stream(void)
+{
     uint8_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE) & 0xFF;
     uint16_t mode = VS_Read_SCI(SCI_MODE);
     mode |= SM_CANCEL;
@@ -855,7 +871,8 @@ void VS_cancel_stream(void) {
     }
 }
 
-void VS_flush_buffers(void) {
+void VS_flush_buffers(void)
+{
     uint8_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE) & 0xFF;
 
     /* send 65 * 32 bytes */
