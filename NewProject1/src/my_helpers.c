@@ -93,6 +93,8 @@ cleanup:
 uint8_t do_http_get(uint8_t sn , const char *url, void (writefunc)(const char *, uint32_t ))
 {
 // de socket is open naar de server, nu de http request erin
+    TickType_t timeout = 1000; // timeout value 1 second
+
     char *buf = pvPortMalloc(128);
     if (buf == NULL) {
         goto cleanup;
@@ -103,12 +105,12 @@ uint8_t do_http_get(uint8_t sn , const char *url, void (writefunc)(const char *,
     // we verwachten antwoord nu
 
     // we geven het 1 seconde om de header te laden
-    TickType_t timeout = xTaskGetTickCount() + 1000;
+    TickType_t tstart = xTaskGetTickCount(); //  + 1000;
     uint32_t nbuf = 0;
     do {
         taskYIELD();
-        TickType_t tnow = xTaskGetTickCount();
-        if (tnow > timeout) {
+        //TickType_t tnow = xTaskGetTickCount();
+        if ((xTaskGetTickCount() - tstart) > timeout) {
             break;
         }
         nbuf = getSn_RX_RSR(sn);
@@ -122,7 +124,7 @@ uint8_t do_http_get(uint8_t sn , const char *url, void (writefunc)(const char *,
         do {
 
             int32_t total=0;
-            len=recv(sn,buf,128);
+            len=recv(sn,buf,128,8000); // 8 sec timeout
             if (len>0) {
                 writefunc(buf,len);
                 total+=len;
@@ -191,7 +193,7 @@ const char *socket_error_to_string(const int v)
     }
     return rv;
 }
-
+/* not working on stm32f401RET
 //Lua: string = read_unique_device_id()
 static int cpu_read_unique_device_id( uint32_t *L )
 {
@@ -205,4 +207,4 @@ static int cpu_read_unique_device_id( uint32_t *L )
     }
     return 1;
 }
-
+*/

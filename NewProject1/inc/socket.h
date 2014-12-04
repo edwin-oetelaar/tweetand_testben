@@ -246,6 +246,8 @@ int32_t send(uint8_t sn, const void * buf, uint16_t len);
  * @param sn  Socket number. It should be <b>0 ~ @ref \_WIZCHIP_SOCK_NUM_</b>.
  * @param buf Pointer buffer to read incoming data.
  * @param len The max data length of data in buf.
+ * @param timeout_ms Timeout, wait this many ms for a response
+ *
  * @return	@b Success : The real received data size \n
  *          @b Fail    :\n
  *                     @ref SOCKERR_SOCKSTATUS - Invalid socket status for socket operation \n
@@ -255,7 +257,7 @@ int32_t send(uint8_t sn, const void * buf, uint16_t len);
  *                     @ref SOCK_BUSY          - Socket is busy.
  */
 // int32_t recv(uint8_t sn, uint8_t * buf, uint16_t len);
-int32_t recv(uint8_t sn, void * buf, uint16_t len);
+int32_t recv(uint8_t sn, void *buf, uint16_t len, const uint32_t timeout_ms);
 
 /**
  * @ingroup WIZnet_socket_APIs
