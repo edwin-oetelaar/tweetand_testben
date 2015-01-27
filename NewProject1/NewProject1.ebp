@@ -179,6 +179,7 @@
 		<Unit filename="freertos\inc\FreeRTOS.h" />
 		<Unit filename="freertos\inc\StackMacros.h" />
 		<Unit filename="freertos\inc\croutine.h" />
+		<Unit filename="freertos\inc\deprecated_definitions.h" />
 		<Unit filename="freertos\inc\event_groups.h" />
 		<Unit filename="freertos\inc\list.h" />
 		<Unit filename="freertos\inc\mpu_wrappers.h" />
