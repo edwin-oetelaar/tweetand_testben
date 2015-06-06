@@ -1,5 +1,5 @@
 /*
-    FreeRTOS V8.2.0 - Copyright (C) 2015 Real Time Engineers Ltd.
+    FreeRTOS V8.2.1 - Copyright (C) 2015 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
@@ -10,12 +10,12 @@
     the terms of the GNU General Public License (version 2) as published by the
     Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
 
-	***************************************************************************
+    ***************************************************************************
     >>!   NOTE: The modification to the GPL is included to allow you to     !<<
     >>!   distribute a combined work that includes FreeRTOS without being   !<<
     >>!   obliged to provide the source code for proprietary components     !<<
     >>!   outside of the FreeRTOS kernel.                                   !<<
-	***************************************************************************
+    ***************************************************************************
 
     FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -37,17 +37,17 @@
     ***************************************************************************
 
     http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-	the FAQ page "My application does not run, what could be wrong?".  Have you
-	defined configASSERT()?
+    the FAQ page "My application does not run, what could be wrong?".  Have you
+    defined configASSERT()?
 
-	http://www.FreeRTOS.org/support - In return for receiving this top quality
-	embedded software for free we request you assist our global community by
-	participating in the support forum.
+    http://www.FreeRTOS.org/support - In return for receiving this top quality
+    embedded software for free we request you assist our global community by
+    participating in the support forum.
 
-	http://www.FreeRTOS.org/training - Investing in training allows your team to
-	be as productive as possible as early as possible.  Now you can receive
-	FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-	Ltd, and the world's leading authority on the world's leading RTOS.
+    http://www.FreeRTOS.org/training - Investing in training allows your team to
+    be as productive as possible as early as possible.  Now you can receive
+    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
+    Ltd, and the world's leading authority on the world's leading RTOS.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, a DOS
@@ -99,8 +99,8 @@ functions but without including stdio.h here. */
 #endif /* configUSE_STATS_FORMATTING_FUNCTIONS == 1 ) */
 
 /* Sanity check the configuration. */
-#if configUSE_TICKLESS_IDLE != 0
-	#if INCLUDE_vTaskSuspend != 1
+#if( configUSE_TICKLESS_IDLE != 0 )
+	#if( INCLUDE_vTaskSuspend != 1 )
 		#error INCLUDE_vTaskSuspend must be set to 1 if configUSE_TICKLESS_IDLE is not set to 0
 	#endif /* INCLUDE_vTaskSuspend */
 #endif /* configUSE_TICKLESS_IDLE */
@@ -247,7 +247,7 @@ PRIVILEGED_DATA static volatile UBaseType_t uxPendedTicks 			= ( UBaseType_t ) 0
 PRIVILEGED_DATA static volatile BaseType_t xYieldPending 			= pdFALSE;
 PRIVILEGED_DATA static volatile BaseType_t xNumOfOverflows 			= ( BaseType_t ) 0;
 PRIVILEGED_DATA static UBaseType_t uxTaskNumber 					= ( UBaseType_t ) 0U;
-PRIVILEGED_DATA static volatile TickType_t xNextTaskUnblockTime		= portMAX_DELAY;
+PRIVILEGED_DATA static volatile TickType_t xNextTaskUnblockTime		= ( TickType_t ) 0U; /* Initialised to portMAX_DELAY; before the scheduler starts. */
 
 /* Context switches are held pending while the scheduler is suspended.  Also,
 interrupts must not manipulate the xGenericListItem of a TCB, or any of the
@@ -387,7 +387,7 @@ count overflows. */
  * the task.  It is inserted at the end of the list.
  */
 #define prvAddTaskToReadyList( pxTCB )																\
-	traceMOVED_TASK_TO_READY_STATE( pxTCB )															\
+	traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
 	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
 	vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xGenericListItem ) )
 /*-----------------------------------------------------------*/
@@ -555,7 +555,7 @@ TCB_t * pxNewTCB;
 StackType_t *pxTopOfStack;
 
 	configASSERT( pxTaskCode );
-	configASSERT( ( ( uxPriority & ( ~portPRIVILEGE_BIT ) ) < configMAX_PRIORITIES ) );
+	configASSERT( ( ( uxPriority & ( UBaseType_t ) ( ~portPRIVILEGE_BIT ) ) < ( UBaseType_t ) configMAX_PRIORITIES ) );
 
 	/* Allocate the memory required by the TCB and stack for the new task,
 	checking that the allocation was successful. */
@@ -598,7 +598,7 @@ StackType_t *pxTopOfStack;
 		#if( portSTACK_GROWTH < 0 )
 		{
 			pxTopOfStack = pxNewTCB->pxStack + ( usStackDepth - ( uint16_t ) 1 );
-			pxTopOfStack = ( StackType_t * ) ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack ) & ( ( portPOINTER_SIZE_TYPE ) ~portBYTE_ALIGNMENT_MASK  ) ); /*lint !e923 MISRA exception.  Avoiding casts between pointers and integers is not practical.  Size differences accounted for using portPOINTER_SIZE_TYPE type. */
+			pxTopOfStack = ( StackType_t * ) ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack ) & ( ~( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK ) ) ); /*lint !e923 MISRA exception.  Avoiding casts between pointers and integers is not practical.  Size differences accounted for using portPOINTER_SIZE_TYPE type. */
 
 			/* Check the alignment of the calculated top of stack is correct. */
 			configASSERT( ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack & ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK ) == 0UL ) );
@@ -1588,6 +1588,7 @@ BaseType_t xReturn;
 		}
 		#endif /* configUSE_NEWLIB_REENTRANT */
 
+		xNextTaskUnblockTime = portMAX_DELAY;
 		xSchedulerRunning = pdTRUE;
 		xTickCount = ( TickType_t ) 0U;
 
@@ -2386,7 +2387,7 @@ TickType_t xTimeToWake;
 
 #if configUSE_TIMERS == 1
 
-	void vTaskPlaceOnEventListRestricted( List_t * const pxEventList, const TickType_t xTicksToWait )
+	void vTaskPlaceOnEventListRestricted( List_t * const pxEventList, const TickType_t xTicksToWait, const BaseType_t xWaitIndefinitely )
 	{
 	TickType_t xTimeToWake;
 
@@ -2395,7 +2396,7 @@ TickType_t xTimeToWake;
 		/* This function should not be called by application code hence the
 		'Restricted' in its name.  It is not part of the public API.  It is
 		designed for use by kernel code, and has special calling requirements -
-		it should be called from a critical section. */
+		it should be called with the scheduler suspended. */
 
 
 		/* Place the event list item of the TCB in the appropriate event list.
@@ -2406,7 +2407,8 @@ TickType_t xTimeToWake;
 
 		/* We must remove this task from the ready list before adding it to the
 		blocked list as the same list item is used for both lists.  This
-		function is called form a critical section. */
+		function is called with the scheduler locked so interrupts will not
+		access the lists at the same time. */
 		if( uxListRemove( &( pxCurrentTCB->xGenericListItem ) ) == ( UBaseType_t ) 0 )
 		{
 			/* The current task must be in a ready list, so there is no need to
@@ -2418,12 +2420,44 @@ TickType_t xTimeToWake;
 			mtCOVERAGE_TEST_MARKER();
 		}
 
-		/* Calculate the time at which the task should be woken if the event does
-		not occur.  This may overflow but this doesn't matter. */
-		xTimeToWake = xTickCount + xTicksToWait;
+		/* If vTaskSuspend() is available then the suspended task list is also
+		available and a task that is blocking indefinitely can enter the
+		suspended state (it is not really suspended as it will re-enter the
+		Ready state when the event it is waiting indefinitely for occurs).
+		Blocking indefinitely is useful when using tickless idle mode as when
+		all tasks are blocked indefinitely all timers can be turned off. */
+		#if( INCLUDE_vTaskSuspend == 1 )
+		{
+			if( xWaitIndefinitely == pdTRUE )
+			{
+				/* Add the task to the suspended task list instead of a delayed
+				task list to ensure the task is not woken by a timing event.  It
+				will block indefinitely. */
+				vListInsertEnd( &xSuspendedTaskList, &( pxCurrentTCB->xGenericListItem ) );
+			}
+			else
+			{
+				/* Calculate the time at which the task should be woken if the
+				event does not occur.  This may overflow but this doesn't
+				matter. */
+				xTimeToWake = xTickCount + xTicksToWait;
+				traceTASK_DELAY_UNTIL();
+				prvAddCurrentTaskToDelayedList( xTimeToWake );
+			}
+		}
+		#else
+		{
+			/* Calculate the time at which the task should be woken if the event
+			does not occur.  This may overflow but this doesn't matter. */
+			xTimeToWake = xTickCount + xTicksToWait;
+			traceTASK_DELAY_UNTIL();
+			prvAddCurrentTaskToDelayedList( xTimeToWake );
 
-		traceTASK_DELAY_UNTIL();
-		prvAddCurrentTaskToDelayedList( xTimeToWake );
+			/* Remove compiler warnings when INCLUDE_vTaskSuspend() is not
+			defined. */
+			( void ) xWaitIndefinitely;
+		}
+		#endif
 	}
 
 #endif /* configUSE_TIMERS */
@@ -2479,12 +2513,12 @@ BaseType_t xReturn;
 		xReturn = pdFALSE;
 	}
 
-	#if( configUSE_TICKLESS_IDLE == 1 )
+	#if( configUSE_TICKLESS_IDLE != 0 )
 	{
 		/* If a task is blocked on a kernel object then xNextTaskUnblockTime
 		might be set to the blocked task's time out time.  If the task is
 		unblocked for a reason other than a timeout xNextTaskUnblockTime is
-		normally left unchanged, because it is automatically get reset to a new
+		normally left unchanged, because it is automatically reset to a new
 		value when the tick count equals xNextTaskUnblockTime.  However if
 		tickless idling is used it might be more important to enter sleep mode
 		at the earliest possible time - so reset xNextTaskUnblockTime here to
@@ -2757,10 +2791,12 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
 }
 /*-----------------------------------------------------------*/
 
-#if configUSE_TICKLESS_IDLE != 0
+#if( configUSE_TICKLESS_IDLE != 0 )
 
 	eSleepModeStatus eTaskConfirmSleepModeStatus( void )
 	{
+	/* The idle task exists in addition to the application tasks. */
+	const UBaseType_t uxNonApplicationTasks = 1;
 	eSleepModeStatus eReturn = eStandardSleep;
 
 		if( listCURRENT_LIST_LENGTH( &xPendingReadyList ) != 0 )
@@ -2775,29 +2811,23 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
 		}
 		else
 		{
-			#if configUSE_TIMERS == 0
+			/* If all the tasks are in the suspended list (which might mean they
+			have an infinite block time rather than actually being suspended)
+			then it is safe to turn all clocks off and just wait for external
+			interrupts. */
+			if( listCURRENT_LIST_LENGTH( &xSuspendedTaskList ) == ( uxCurrentNumberOfTasks - uxNonApplicationTasks ) )
 			{
-				/* The idle task exists in addition to the application tasks. */
-				const UBaseType_t uxNonApplicationTasks = 1;
-
-				/* If timers are not being used and all the tasks are in the
-				suspended list (which might mean they have an infinite block
-				time rather than actually being suspended) then it is safe to
-				turn all clocks off and just wait for external interrupts. */
-				if( listCURRENT_LIST_LENGTH( &xSuspendedTaskList ) == ( uxCurrentNumberOfTasks - uxNonApplicationTasks ) )
-				{
-					eReturn = eNoTasksWaitingTimeout;
-				}
-				else
-				{
-					mtCOVERAGE_TEST_MARKER();
-				}
+				eReturn = eNoTasksWaitingTimeout;
 			}
-			#endif /* configUSE_TIMERS */
+			else
+			{
+				mtCOVERAGE_TEST_MARKER();
+			}
 		}
 
 		return eReturn;
 	}
+
 #endif /* configUSE_TICKLESS_IDLE */
 /*-----------------------------------------------------------*/
 
@@ -2956,7 +2986,8 @@ UBaseType_t x;
 	{
 	TCB_t *pxTCB;
 
-		/* If null is passed in here then we are deleting ourselves. */
+		/* If null is passed in here then we are modifying the MPU settings of
+		the calling task. */
 		pxTCB = prvGetTCBFromHandle( xTaskToModify );
 
         vPortStoreTaskMPUSettings( &( pxTCB->xMPUSettings ), xRegions, NULL, 0 );
@@ -3320,9 +3351,8 @@ TCB_t *pxTCB;
 
 	if( listLIST_IS_EMPTY( pxDelayedTaskList ) != pdFALSE )
 	{
-		/* The new current delayed list is empty.  Set
-		xNextTaskUnblockTime to the maximum possible value so it is
-		extremely unlikely that the
+		/* The new current delayed list is empty.  Set xNextTaskUnblockTime to
+		the maximum possible value so it is	extremely unlikely that the
 		if( xTickCount >= xNextTaskUnblockTime ) test will pass until
 		there is an item in the delayed list. */
 		xNextTaskUnblockTime = portMAX_DELAY;
@@ -3394,6 +3424,9 @@ TCB_t *pxTCB;
 		locked then the mutex holder might now be NULL. */
 		if( pxMutexHolder != NULL )
 		{
+			/* If the holder of the mutex has a priority below the priority of
+			the task attempting to obtain the mutex then it will temporarily
+			inherit the priority of the task attempting to obtain the mutex. */
 			if( pxTCB->uxPriority < pxCurrentTCB->uxPriority )
 			{
 				/* Adjust the mutex holder state to account for its new
@@ -3408,8 +3441,8 @@ TCB_t *pxTCB;
 					mtCOVERAGE_TEST_MARKER();
 				}
 
-				/* If the task being modified is in the ready state it will need to
-				be moved into a new list. */
+				/* If the task being modified is in the ready state it will need
+				to be moved into a new list. */
 				if( listIS_CONTAINED_WITHIN( &( pxReadyTasksLists[ pxTCB->uxPriority ] ), &( pxTCB->xGenericListItem ) ) != pdFALSE )
 				{
 					if( uxListRemove( &( pxTCB->xGenericListItem ) ) == ( UBaseType_t ) 0 )
@@ -3456,15 +3489,23 @@ TCB_t *pxTCB;
 
 		if( pxMutexHolder != NULL )
 		{
+			/* A task can only have an inherited priority if it holds the mutex.
+			If the mutex is held by a task then it cannot be given from an
+			interrupt, and if a mutex is given by the holding task then it must
+			be the running state task. */
+			configASSERT( pxTCB == pxCurrentTCB );
+
 			configASSERT( pxTCB->uxMutexesHeld );
 			( pxTCB->uxMutexesHeld )--;
 
+			/* Has the holder of the mutex inherited the priority of another
+			task? */
 			if( pxTCB->uxPriority != pxTCB->uxBasePriority )
 			{
 				/* Only disinherit if no other mutexes are held. */
 				if( pxTCB->uxMutexesHeld == ( UBaseType_t ) 0 )
 				{
-					/* A task can only have an inhertied priority if it holds
+					/* A task can only have an inherited priority if it holds
 					the mutex.  If the mutex is held by a task then it cannot be
 					given from an interrupt, and if a mutex is given by the
 					holding	task then it must be the running state task.  Remove
@@ -4090,7 +4131,7 @@ TickType_t uxReturn;
 
 #if( configUSE_TASK_NOTIFICATIONS == 1 )
 
-	BaseType_t xTaskNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction )
+	BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue )
 	{
 	TCB_t * pxTCB;
 	eNotifyValue eOriginalNotifyState;
@@ -4101,6 +4142,11 @@ TickType_t uxReturn;
 
 		taskENTER_CRITICAL();
 		{
+			if( pulPreviousNotificationValue != NULL )
+			{
+				*pulPreviousNotificationValue = pxTCB->ulNotifiedValue;
+			}
+
 			eOriginalNotifyState = pxTCB->eNotifyState;
 
 			pxTCB->eNotifyState = eNotified;
@@ -4147,6 +4193,22 @@ TickType_t uxReturn;
 
 				/* The task should not have been on an event list. */
 				configASSERT( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) == NULL );
+
+				#if( configUSE_TICKLESS_IDLE != 0 )
+				{
+					/* If a task is blocked waiting for a notification then
+					xNextTaskUnblockTime might be set to the blocked task's time
+					out time.  If the task is unblocked for a reason other than
+					a timeout xNextTaskUnblockTime is normally left unchanged,
+					because it will automatically get reset to a new value when
+					the tick count equals xNextTaskUnblockTime.  However if
+					tickless idling is used it might be more important to enter
+					sleep mode at the earliest possible time - so reset
+					xNextTaskUnblockTime here to ensure it is updated at the
+					earliest possible time. */
+					prvResetNextTaskUnblockTime();
+				}
+				#endif
 
 				if( pxTCB->uxPriority > pxCurrentTCB->uxPriority )
 				{

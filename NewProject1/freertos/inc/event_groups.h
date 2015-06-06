@@ -1,5 +1,5 @@
 /*
-    FreeRTOS V8.2.0 - Copyright (C) 2015 Real Time Engineers Ltd.
+    FreeRTOS V8.2.1 - Copyright (C) 2015 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
@@ -10,12 +10,12 @@
     the terms of the GNU General Public License (version 2) as published by the
     Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
 
-	***************************************************************************
+    ***************************************************************************
     >>!   NOTE: The modification to the GPL is included to allow you to     !<<
     >>!   distribute a combined work that includes FreeRTOS without being   !<<
     >>!   obliged to provide the source code for proprietary components     !<<
     >>!   outside of the FreeRTOS kernel.                                   !<<
-	***************************************************************************
+    ***************************************************************************
 
     FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -37,17 +37,17 @@
     ***************************************************************************
 
     http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-	the FAQ page "My application does not run, what could be wrong?".  Have you
-	defined configASSERT()?
+    the FAQ page "My application does not run, what could be wrong?".  Have you
+    defined configASSERT()?
 
-	http://www.FreeRTOS.org/support - In return for receiving this top quality
-	embedded software for free we request you assist our global community by
-	participating in the support forum.
+    http://www.FreeRTOS.org/support - In return for receiving this top quality
+    embedded software for free we request you assist our global community by
+    participating in the support forum.
 
-	http://www.FreeRTOS.org/training - Investing in training allows your team to
-	be as productive as possible as early as possible.  Now you can receive
-	FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-	Ltd, and the world's leading authority on the world's leading RTOS.
+    http://www.FreeRTOS.org/training - Investing in training allows your team to
+    be as productive as possible as early as possible.  Now you can receive
+    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
+    Ltd, and the world's leading authority on the world's leading RTOS.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, a DOS
@@ -121,10 +121,10 @@ extern "C" {
  */
 typedef void * EventGroupHandle_t;
 
-/*
+/* 
  * The type that holds event bits always matches TickType_t - therefore the
  * number of bits it holds is set by configUSE_16_BIT_TICKS (16 bits if set to 1,
- * 32 bits if set to 0.
+ * 32 bits if set to 0. 
  *
  * \defgroup EventBits_t EventBits_t
  * \ingroup EventGroup
@@ -340,8 +340,8 @@ EventBits_t xEventGroupClearBits( EventGroupHandle_t xEventGroup, const EventBit
  * while interrupts are disabled, so protects event groups that are accessed
  * from tasks by suspending the scheduler rather than disabling interrupts.  As
  * a result event groups cannot be accessed directly from an interrupt service
- * routine.  Therefore xEventGroupClearBitsFromISR() sends a message to the
- * timer task to have the clear operation performed in the context of the timer
+ * routine.  Therefore xEventGroupClearBitsFromISR() sends a message to the 
+ * timer task to have the clear operation performed in the context of the timer 
  * task.
  *
  * @param xEventGroup The event group in which the bits are to be cleared.
@@ -350,8 +350,8 @@ EventBits_t xEventGroupClearBits( EventGroupHandle_t xEventGroup, const EventBit
  * For example, to clear bit 3 only, set uxBitsToClear to 0x08.  To clear bit 3
  * and bit 0 set uxBitsToClear to 0x09.
  *
- * @return If the request to execute the function was posted successfully then
- * pdPASS is returned, otherwise pdFALSE is returned.  pdFALSE will be returned
+ * @return If the request to execute the function was posted successfully then 
+ * pdPASS is returned, otherwise pdFALSE is returned.  pdFALSE will be returned 
  * if the timer service queue was full.
  *
  * Example usage:
@@ -491,8 +491,8 @@ EventBits_t xEventGroupSetBits( EventGroupHandle_t xEventGroup, const EventBits_
  * *pxHigherPriorityTaskWoken must be initialised to pdFALSE.  See the
  * example code below.
  *
- * @return If the request to execute the function was posted successfully then
- * pdPASS is returned, otherwise pdFALSE is returned.  pdFALSE will be returned
+ * @return If the request to execute the function was posted successfully then 
+ * pdPASS is returned, otherwise pdFALSE is returned.  pdFALSE will be returned 
  * if the timer service queue was full.
  *
  * Example usage:
@@ -521,8 +521,8 @@ EventBits_t xEventGroupSetBits( EventGroupHandle_t xEventGroup, const EventBits_
 		if( xResult == pdPASS )
 		{
 			// If xHigherPriorityTaskWoken is now set to pdTRUE then a context
-			// switch should be requested.  The macro used is port specific and
-			// will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
+			// switch should be requested.  The macro used is port specific and 
+			// will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() - 
 			// refer to the documentation page for the port being used.
 			portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 		}
