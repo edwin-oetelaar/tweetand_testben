@@ -4,9 +4,16 @@
  GPL license etc blah blah
 */
 #include <stddef.h>
+#include "term_io.h"
 #include "kanalenlijst.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "timers.h"
+#include "event_groups.h"
+#include "semphr.h"
 
-static const channel_t channels[] = {
+static const struct channel channels[] = {
     {
         .text = "Radio Arrow 1",
         .host = NULL,
@@ -122,7 +129,7 @@ const uint32_t kl_get_count(void)
 }
 
 /* get pointer to kanaal data struct by index (0 based) */
-const channel_t *kl_get_channel(uint32_t index)
+const struct channel *kl_get_channel(uint32_t index)
 {
 
     if (index < kl_get_count()) {

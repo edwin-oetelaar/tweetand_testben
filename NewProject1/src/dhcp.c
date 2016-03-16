@@ -2,7 +2,7 @@
  * code is modified copy of wiznet code version 1.1.0 of date 2013/11/18
  * modified by Edwin van den Oetelaar (edwin@oetelaar.com) no warranties ever
  */
-
+#include "term_io.h"
 #include "socket.h"
 #include "dhcp.h"
 /* If you want to display debug & processing message, Define _DHCP_DEBUG_ in dhcp.h */

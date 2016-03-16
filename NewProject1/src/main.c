@@ -232,7 +232,7 @@ static void handle_menu_channels(uint8_t key)
     }
     menu_channel = n; // update global var
 
-    const channel_t *p = kl_get_channel(n); // channels + n; // magic
+    const struct channel *p = kl_get_channel(n); // channels + n; // magic
 
     lcd_set_cursor_position(&LCD, 0, 0);
     lcd_write(&LCD, p->text, strlen(p->text));
@@ -1075,7 +1075,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 }
 
 
-uint8_t send_stream(channel_t *p, volatile uint32_t *status)
+uint8_t send_stream(struct channel *p, volatile uint32_t *status)
 {
     int8_t rx = stream_to_test_server(2, /* socket number */
                                       p->host,  /* hostname */
@@ -1086,7 +1086,7 @@ uint8_t send_stream(channel_t *p, volatile uint32_t *status)
                                      );
 }
 
-uint8_t receive_stream(channel_t *p, volatile uint32_t *status)
+uint8_t receive_stream(struct channel *p, volatile uint32_t *status)
 {
     int8_t rx = get_stream_from_server(2,p->host,p->ip,p->port,p->mount,p->passw,status);
 }
@@ -1347,7 +1347,7 @@ void vTaskApplication(void *pvParameters)
         /* check nieuwe task */
         if (change_status) {
             change_status = 0;
-            const channel_t *p = kl_get_channel(active_channel);// channels + active_channel;
+            struct channel *p = kl_get_channel(active_channel);// channels + active_channel;
 
             if (p->mode == pm_listening) {
                 receive_stream(p, &change_status); // runs until change_status==1

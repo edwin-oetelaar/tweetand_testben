@@ -1,11 +1,19 @@
 cmake_minimum_required(VERSION 2.8.4)
+set(CMAKE_VERBOSE_MAKEFILE ON)
+SET(CMAKE_C_COMPILER   arm-none-eabi-gcc)
+SET(CMAKE_CXX_COMPILER   arm-none-eabi-g++)
+# SET(CMAKE_C_COMPILER    C:\\Program Files\ (x86)\\EmBitz\\0.42\\share\\em_armgcc\\bin\\arm-none-eabi-gcc)
+# SET(CMAKE_CXX_COMPILER  C:\\Program Files\ (x86)\\EmBitz\\0.42\\share\\em_armgcc\\bin\\arm-none-eabi-g++)
 project(NewProject1)
+
+# specify the cross compiler
+SET(CMAKE_C_COMPILER   arm-none-eabi-gcc)
+SET(CMAKE_CXX_COMPILER arm-none-eabi-g++)
 
 include_directories(NewProject1/inc NewProject1/freertos/inc NewProject1/SPL/inc NewProject1/cmsis )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-ADD_DEFINITIONS(-DARM_MATH_CM4 -D__FPU_USED -DSTM32F401RE -fno-strict-aliasing -DSTM32F4XX -DUSE_STDPERIPH_DRIVER)
-
+ADD_DEFINITIONS(-DARM_MATH_CM4 -D__FPU_USED -DSTM32F401RE -fno-strict-aliasing -DSTM32F4XX -DUSE_STDPERIPH_DRIVER -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb-interwork -mcpu=cortex-m4 -mthumb -mlittle-endian )
 
 set(SOURCE_FILES
     NewProject1/freertos/src/croutine.c
@@ -31,8 +39,8 @@ set(SOURCE_FILES
     NewProject1/SPL/src/stm32f4xx_dma2d.c
     NewProject1/SPL/src/stm32f4xx_exti.c
     NewProject1/SPL/src/stm32f4xx_flash.c
-    NewProject1/SPL/src/stm32f4xx_fmc.c
-    NewProject1/SPL/src/stm32f4xx_fsmc.c
+  #  NewProject1/SPL/src/stm32f4xx_fmc.c
+  #  NewProject1/SPL/src/stm32f4xx_fsmc.c
     NewProject1/SPL/src/stm32f4xx_gpio.c
     NewProject1/SPL/src/stm32f4xx_hash.c
     NewProject1/SPL/src/stm32f4xx_hash_md5.c
@@ -66,6 +74,6 @@ set(SOURCE_FILES
     NewProject1/src/term_io.c
     NewProject1/src/vs10xx.c
     NewProject1/src/w5500.c
-    NewProject1/src/wizchip_conf.c)
+    NewProject1/src/wizchip_conf.c NewProject1/inc/kanalenlijst.h)
 
 add_executable(NewProject1 ${SOURCE_FILES})
