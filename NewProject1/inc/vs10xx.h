@@ -556,6 +556,7 @@ uint8_t VS_Hard_Reset(void); // reset chip, can timeout
 uint8_t VS_Soft_Reset(uint16_t clockregister); // soft reset
 void VS_Registers_Init(void);//
 void VS_Volume_Set(uint16_t vol);
+void VS_PitchControl_Set(uint16_t enable);
 uint16_t VS_Read_SCI(uint8_t reg); // read a register in vs10xx chip
 
 void VS_Write_SCI(uint8_t reg, uint16_t val); // write register inside vs10xx chip

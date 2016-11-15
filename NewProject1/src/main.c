@@ -318,36 +318,77 @@ static void handle_menu_volume(uint8_t key)
 
 }
 
+static void handle_menu_pitch(uint8_t key)
+{
+    /* volume */
+    // uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
+    uint8_t flag = 0;
+    switch (key)
+    {
+
+    case 'D' :
+        VS_PitchControl_Set(1);
+        flag=1;
+        break;
+    case 'U' :
+        VS_PitchControl_Set(0);
+        break;
+    }
+
+    lcd_set_cursor_position(&LCD, 0, 0);
+    //              1234567890123456
+    lcd_write(&LCD, "## Pitch ##", 20);
+    lcd_set_cursor_position(&LCD, 1, 0);
+    const char b1[] = ">>Enabled<<     ";
+    const char b2[] = ">>Disabled<<    ";
+    //char buf[20];
+    //sprintf(buf, "%03d          ", 255 - playout_volume);
+    const char *p ;
+    if (flag)
+    {
+        p=b1;
+    }
+    else
+    {
+        p=b2;
+    }
+    lcd_write(&LCD, p, 16);
+
+}
 
 static void handle_menu_key(uint8_t key)
 {
     //static n = 0;
     static uint8_t kolom = 0;
+    const uint8_t colmax = 2; /* 0,1,2 */
     /* kolom 0 = channel selectie,
      * kolom 1 = volume control
+     * kolom 2 = pitch control
      */
     /* left right is kolom */
     switch (key)
     {
     case 'L' :
-        if (kolom == 1)
+        if (kolom > 0)
         {
-            kolom = 0;
+            kolom--;
         }
         else
         {
-            kolom = 1;
+            kolom=colmax;
         }
-        break;
+
+
     case 'R' :
-        if (kolom == 0)
+        if (kolom <colmax )
         {
-            kolom = 1;
+            kolom++;
         }
         else
         {
-            kolom = 0;
+            kolom=0;
         }
+
         break;
     }
 
@@ -361,6 +402,10 @@ static void handle_menu_key(uint8_t key)
     case 1:
         /* volume instellen */
         handle_menu_volume(key);
+        break;
+    case 2:
+        /* volume instellen */
+        handle_menu_pitch(key);
         break;
 
     }
@@ -1523,6 +1568,7 @@ void vTaskApplication(void *pvParameters)
 
     VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
     VS_Volume_Set((playout_volume << 8) | playout_volume);
+    VS_PitchControl_Set(1); /* set pitch up == on */
 
     while (1)
     {
@@ -1544,6 +1590,7 @@ void vTaskApplication(void *pvParameters)
                 VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
+                VS_PitchControl_Set(1); /* set pitch up == on */
             }
 
             if (p->mode == pm_sending)
@@ -1552,6 +1599,7 @@ void vTaskApplication(void *pvParameters)
                 VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
+                VS_PitchControl_Set(1); /* set pitch up == on */
             }
         }
     }

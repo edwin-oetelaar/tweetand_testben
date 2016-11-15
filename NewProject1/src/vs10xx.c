@@ -843,6 +843,45 @@ uint8_t VS_Encoder_Init(radio_player_t *rp)
     return rv;
 }
 
+void VS_PitchControl_Set(uint16_t enable) {
+    /*
+    Speed shifter allows the playback tempo to be changed without changing the playback pitch.
+The playback tempo is speedShif ter
+16384 , i.e. 16384 is the normal speed. The minimum speed is
+0.68x (11141) and maximum speed 1.64x (26869).
+If you want to change pitch without changing tempo, adjust the speed and compensate by also
+adjusting the samplerate. For example two semitones is 2
+−2/12 = 0.8909, so set the speed
+shifter to 2
+−2/12 ∗ 16384 = 14596 and set r❛t❡❚✉♥❡ to (22/12 − 1) ∗ 1000000 = 122462.
+
+6 PLAYMODE_SPEEDSHIFTER_ON Speedshifter enable
+5 PLAYMODE_EQ5_ON EQ5 enable
+4 PLAYMODE_PCMMIXER_ON PCM Mixer enable
+3 PLAYMODE_ADMIXER_ON AD Mixer enable
+2 PLAYMODE_VUMETER_ON VU Meter enable
+1 PLAYMODE_PAUSE_ON Pause enable
+0 PLAYMODE_MONO_OUTPUT Mono output select
+
+*/
+    uint16_t org_playmode = VS_Read_Mem(PAR_PLAY_MODE);
+    uint16_t org_speedshift = VS_Read_Mem(PAR_SPEED_SHIFTER);
+    uint16_t ratetune = 100000;
+    uint16_t speedshift = 0x4000;
+    uint16_t newval = 0x00;
+    /* schrijf nieuwe waarden indien enable != 0*/
+    if (enable) {
+        newval = org_playmode | 0x40;
+        ratetune = 122462;
+        speedshift = 14596;
+
+    }
+    else {
+         newval = org_playmode & ~( 0x40 );
+    }
+    VS_Write_mem(PAR_PLAY_MODE,newval);
+    VS_Write_mem(PAR_SPEED_SHIFTER,speedshift);
+}
 
 void VS_cancel_stream(void)
 {
