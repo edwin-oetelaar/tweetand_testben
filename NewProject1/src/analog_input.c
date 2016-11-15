@@ -5,9 +5,7 @@
 #include "task.h"
 #include "analog_input.h"
 
-
-void adc_configure(void)
-{
+void adc_configure(void) {
     // zet de ADC van de A0 input voor de keys goed,
     // de ADC gaat 8 bit werken, geen 16 of 12, nergens voor nodig, veel te veel ruis
     //

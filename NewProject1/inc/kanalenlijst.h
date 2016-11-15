@@ -15,7 +15,7 @@ struct channel {
     char *text;
     char *host;
     char *passw;
-    char ip[4];
+    uint8_t ip[4];
     uint16_t port;
     char *mount;
     char mode; //  = pm_listening
@@ -23,7 +23,6 @@ struct channel {
 
 
 const struct channel *kl_get_channel(uint32_t index);
-
-const uint32_t kl_get_count(void);
+uint32_t kl_get_count(void);
 
 #endif //NEWPROJECT1_KANALENLIJST_H_H

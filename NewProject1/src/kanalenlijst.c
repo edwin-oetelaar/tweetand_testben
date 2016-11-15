@@ -123,7 +123,7 @@ static const struct channel channels[] = {
 };
 
 /* return number of items in the kanalenlijst */
-const uint32_t kl_get_count(void)
+uint32_t kl_get_count(void)
 {
     return sizeof(channels) / sizeof(channels[0]);
 }
@@ -135,6 +135,6 @@ const struct channel *kl_get_channel(uint32_t index)
     if (index < kl_get_count()) {
         return &channels[index];
     }
-    xprintf("assert: kl_get_channel i=%d\r\n",index);
+    xprintf("assert: kl_get_channel i=%ld\r\n",index);
     return NULL;
 }

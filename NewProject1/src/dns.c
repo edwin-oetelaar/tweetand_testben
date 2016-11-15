@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "FreeRTOS.h"
+#include "task.h"
 #include "socket.h"
 #include "dns.h"
 

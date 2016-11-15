@@ -145,7 +145,7 @@
  * @return @b Success : The socket number @b 'sn' passed as parameter\n
  *         @b Fail    :\n @ref SOCKERR_SOCKNUM     - Invalid socket number\n
  *                        @ref SOCKERR_SOCKMODE    - Not support socket mode as TCP, UDP, and so on. \n
- *                        @ref SOCKERR_SOCKFLAG    - Invaild socket flag.
+ *                        @ref SOCKERR_SOCKFLAG    - Invalid socket flag.
  */
 int8_t  socket(uint8_t sn, uint8_t protocol, uint16_t port, uint8_t flag);
 

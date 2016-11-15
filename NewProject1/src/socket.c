@@ -107,12 +107,12 @@ int8_t socket(uint8_t sn, uint8_t protocol, uint16_t port, uint8_t flag)
     }
     setSn_PORT(sn, port);
     setSn_CR(sn, Sn_CR_OPEN);
-    while (getSn_CR(sn));
+    while (getSn_CR(sn)); /* can hang TODO */
     sock_io_mode |= ((flag & SF_IO_NONBLOCK) << sn);
     sock_is_sending &= ~(1 << sn);
     sock_remained_size[sn] = 0;
     sock_pack_info[sn] = 0;
-    while (getSn_SR(sn) == SOCK_CLOSED);
+    while (getSn_SR(sn) == SOCK_CLOSED); /* can hang TODO */
     return (int8_t) sn;
 }
 
