@@ -73,7 +73,7 @@ static uint32_t menu_channel = 0; // index of channel menu is showing
 volatile uint32_t player_active_flag = 0; // the player can consume stuff now
 volatile uint32_t player_running = 0; // the player is running, do not destroy the ringbuffer
 
-static uint8_t playout_volume = 5;
+static uint8_t playout_volume = 30; //  not so loud
 const uint8_t auto_start_first_channel = 1; // make music on startup
 
 /*default volume */
@@ -322,38 +322,48 @@ static void handle_menu_pitch(uint8_t key)
 {
     /* volume */
     // uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
-    uint8_t flag = 0;
+    static uint8_t flag = 0;
     switch (key)
     {
 
     case 'D' :
-        VS_PitchControl_Set(1);
-        flag=1;
+        if (flag > 0) flag--;
+
         break;
     case 'U' :
-        VS_PitchControl_Set(0);
+        //VS_PitchControl_Set(0);
+        if (flag < 4) flag++;
         break;
     }
+
+    VS_PitchControl_Set(flag);
 
     lcd_set_cursor_position(&LCD, 0, 0);
     //              1234567890123456
     lcd_write(&LCD, "## Pitch ##", 20);
     lcd_set_cursor_position(&LCD, 1, 0);
-    const char b1[] = ">>Enabled<<     ";
+    const char b1[] = ">>Enabled :";
+    char buf[20] = {0,};
+    strcat(buf,b1);
+    int lx = strlen(b1);
+    buf[lx] = '0' + flag;
+    buf[lx+1] =0;
+
     const char b2[] = ">>Disabled<<    ";
+
     //char buf[20];
     //sprintf(buf, "%03d          ", 255 - playout_volume);
     const char *p ;
     if (flag)
     {
-        p=b1;
+        p=buf;
     }
     else
     {
         p=b2;
     }
     lcd_write(&LCD, p, 16);
-
+    // VS_Registers_Dump();
 }
 
 static void handle_menu_key(uint8_t key)
@@ -1568,7 +1578,7 @@ void vTaskApplication(void *pvParameters)
 
     VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
     VS_Volume_Set((playout_volume << 8) | playout_volume);
-    VS_PitchControl_Set(1); /* set pitch up == on */
+    //VS_PitchControl_Set(1); /* set pitch up == on */
 
     while (1)
     {
@@ -1590,7 +1600,7 @@ void vTaskApplication(void *pvParameters)
                 VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
-                VS_PitchControl_Set(1); /* set pitch up == on */
+                // VS_PitchControl_Set(1); /* set pitch up == on */
             }
 
             if (p->mode == pm_sending)
@@ -1599,7 +1609,7 @@ void vTaskApplication(void *pvParameters)
                 VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
-                VS_PitchControl_Set(1); /* set pitch up == on */
+                // VS_PitchControl_Set(1); /* set pitch up == on */
             }
         }
     }
