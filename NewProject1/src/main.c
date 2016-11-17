@@ -332,7 +332,7 @@ static void handle_menu_pitch(uint8_t key)
         break;
     case 'U' :
         //VS_PitchControl_Set(0);
-        if (flag < 4) flag++;
+        if (flag < 13) flag++;
         break;
     }
 

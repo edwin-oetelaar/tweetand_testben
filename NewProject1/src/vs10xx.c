@@ -951,6 +951,34 @@ void VS_PitchControl_Set(uint16_t enable)
     xprintf("playmode=%x\n",org_playmode);
     xprintf("speeshft=%x\n",org_speedshift);
     xprintf("ratetune=%ld\n",org_ratetune);
+//fn = f0 * (a)n
+// 1.059463094359 = a
+// 1.122462048
+// 1.189207115
+// 1.25992105
+// 1.334839854
+// 1.414213562
+
+    /*constant
+    1.0594630944	59463.094359	    0.9438743127	15464.4367389812	17358.2433379779
+    1.1224620483	122462.048308747	0.8908987181	14596.4845980195	18390.4181994905
+    1.189207115	    189207.115001727	0.8408964153	13777.2468675284	19483.9693721883
+    1.2599210499	259921.049893469	0.793700526		13003.989417738		20642.5464814546
+    1.3348398542	334839.854168174	0.7491535384	12274.1315737909	21870.0161706914
+    1.4142135624	414213.56237073	    0.7071067812	11585.2375029798	23170.475005882
+
+
+    */
+
+    /*
+    parrot
+    case 3:
+            playmode = org_playmode | 0x40;
+            ratetune   = 250000; // up
+            speedshift = 12288; // down
+            break;
+0.68x (11141) and maximum speed 1.64x (26869).
+    */
 
     int32_t ratetune = 0x00000000;
     uint16_t speedshift = 0x4000;
@@ -961,28 +989,84 @@ void VS_PitchControl_Set(uint16_t enable)
     {
     case 0:
         playmode = org_playmode & ~( 0x40 );
-
         break;
     case 1:
         playmode = org_playmode | 0x40;
-        ratetune   = 122462;
-        speedshift = 14596;
+        ratetune   = 59463L; // up in ppm
+        speedshift = 15464;  // down from 0x4000
         break;
-    case 2:
+
+    case 2: // 2 up
         playmode = org_playmode | 0x40;
-        ratetune   = -122462;
-        speedshift = 18172;
+        ratetune   = 122462L; // up in ppm
+        speedshift = 14596;  // down from 0x4000
         break;
-    case 3:
+    case 3: // 2 up
         playmode = org_playmode | 0x40;
-        ratetune   = 250000;
-        speedshift = 12288;
+        ratetune   = 189207L; // down
+        speedshift = 13777; // up
         break;
-    case 4:
+
+    case 4: // 4 up
         playmode = org_playmode | 0x40;
-        ratetune   = 122462;
-        speedshift = 14596;
+        ratetune   = 259921L; // down
+        speedshift = 13003; // up
         break;
+
+    case 5: // 5 up
+        playmode = org_playmode | 0x40;
+        ratetune   = 334840L; // down
+        speedshift = 12274; // up
+        break;
+    case 6: // 6 up
+        playmode = org_playmode | 0x40;
+        ratetune   = 414214L; // down
+        speedshift = 11585; // up
+        break;
+
+    case 7: // 1 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -59463L; // 2 down
+        speedshift = 17358; // up
+        break;
+
+    case 8: // 2 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -122462L; // 2 down
+        speedshift = 18390; // up
+        break;
+
+    case 9: // 3 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -189207L; // 2 down
+        speedshift = 19484; // up
+        break;
+
+    case 10: // 4 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -259921L; // 2 down
+        speedshift = 20643; // up
+        break;
+
+    case 11: // 5 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -334840L; // 2 down
+        speedshift = 21870; // up
+        break;
+
+    case 12: // 6 down
+        playmode = org_playmode | 0x40;
+        ratetune   = -414213L; // 2 down
+        speedshift = 23170; // up
+        break;
+
+    case 13:
+        // parrot
+        playmode = org_playmode | 0x40;
+        ratetune   = 250000L; // up
+        speedshift = 12288; // down
+        break;
+
     default:
         xprintf("WTF\n");
 
