@@ -1,14 +1,14 @@
 /**
   ******************************************************************************
-  * @file    Project/STM32F4xx_StdPeriph_Templates/stm32f4xx_conf.h
+  * @file    GPIO/GPIO_IOToggle/stm32f4xx_conf.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    13-November-2013
+  * @version V1.7.0
+  * @date    22-April-2016
   * @brief   Library configuration file.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 /* Uncomment the line below to enable peripheral header file inclusion */
-#include "stm32f4xx_adc.h" // voor de ADC keypad
+#include "stm32f4xx_adc.h"
 #include "stm32f4xx_crc.h"
 #include "stm32f4xx_dbgmcu.h"
 #include "stm32f4xx_dma.h"
