@@ -144,8 +144,10 @@
 		<Unit filename="inc\system_stm32f4xx.h" />
 		<Unit filename="inc\term_io.h" />
 		<Unit filename="inc\vs10xx.h" />
+		<Unit filename="inc\vTaskDHCP.h" />
 		<Unit filename="inc\w5500.h" />
 		<Unit filename="inc\wizchip_conf.h" />
+		<Unit filename="inc\wizchip_hardware.h" />
 		<Unit filename="readme.txt" />
 		<Unit filename="SPL\inc\misc.h" />
 		<Unit filename="SPL\inc\stm32f4xx_adc.h" />
@@ -281,6 +283,9 @@
 		<Unit filename="src\system_stm32f4xx.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src\TaskDHCP.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src\term_io.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -291,6 +296,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src\wizchip_conf.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src\wizchip_hardware.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="stm32f401re_flash.ld" />
@@ -334,6 +342,15 @@
 				</target_debugging_settings>
 			</debugger>
 			<envvars />
+			<DoxyBlocks>
+				<comment_style block="0" line="0" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot />
+				<general />
+			</DoxyBlocks>
 		</Extensions>
 	</Project>
 </EmBitz_project_file>

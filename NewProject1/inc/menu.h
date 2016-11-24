@@ -138,7 +138,7 @@ typedef struct PLAYER_CONTEXT {
     char *strm_buf; // about 1500 bytes of buf to read data from network
     uint16_t strm_buf_size; // size of strm_buf
     uint16_t strm_buf_index;
- /*    ringbuffer_t *rb;  TODO dit eruit halen zit in IPSILOG code */
+    /*    ringbuffer_t *rb;  TODO dit eruit halen zit in IPSILOG code */
     volatile uint8_t consumer_run; // flag to start VS playing the ringbuffer, player sets this on buf high level
     volatile uint8_t consumer_playout; // set when stream ended, not changed from Player
     portTickType ttStartOfBuffering; // timetick when buffering started

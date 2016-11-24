@@ -14,6 +14,14 @@
 #include "semphr.h"
 
 static const struct channel channels[] = {
+     {
+        .text = "Parrot Mode",
+        .host = NULL,
+        .ip = {0,0,0,0},
+        .port = NULL,
+        .mount = "",
+        .mode = pm_parrot
+    },
     {
         .text = "Radio Arrow 1",
         .host = NULL,
@@ -129,8 +137,7 @@ uint32_t kl_get_count(void)
 }
 
 /* get pointer to kanaal data struct by index (0 based) */
-const struct channel *kl_get_channel(uint32_t index)
-{
+const struct channel *kl_get_channel(uint32_t index) {
 
     if (index < kl_get_count()) {
         return &channels[index];

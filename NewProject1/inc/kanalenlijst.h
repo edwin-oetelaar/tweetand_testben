@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 enum {
-    pm_listening = 0, pm_sending = 1
+    pm_listening = 0, pm_sending = 1, pm_parrot=2
 };
 
 struct channel {

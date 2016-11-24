@@ -274,7 +274,7 @@ static const ogg_bitrate_t oggbitrates[] = { //
 #define PAR_ENC_TX_PAUSE_GPIO        0x1e2c /* VS1063 */
 #define PAR_ENC_AEC_ADAPT_MULTIPLIER 0x1e2d /* VS1063 */
 #define PAR_ENC_RESERVED             0x1e2e /* VS1063 */
-#define PAR_ENC_CHANNEL_MAX          0x1e3c /* VS1063 */
+#define PAR_ENC_CHANNEL_MAX          0x1e3c /* VS1063  32 bits denk ik voor 2 kanalen */
 #define PAR_ENC_SERIAL_NUMBER        0x1e3e /* VS1063 */
 
 /* Decoding WMA */

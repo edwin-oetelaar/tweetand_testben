@@ -496,7 +496,7 @@ int8_t DNS_run(const uint8_t *dns_ip, const char *name, uint8_t *ip_from_dns)
     len = dns_makequery(0, (char *)name, pDNSMSG, MAX_DNS_BUF_SIZE);
 
     /* zend message naar DNS server op poort 53 */
- //   sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN);
+//   sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN);
     sendto(DNS_SOCKET, pDNSMSG, len, dns_ip, IPPORT_DOMAIN); /* zomaar 2x eens kijken of dat scheelt */
     /* wacht op antwoord of timeout */
     while (1) {

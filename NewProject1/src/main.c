@@ -28,6 +28,7 @@
 #include "ringbuffer.h"
 #include "wizchip_conf.h"
 #include "kanalenlijst.h"
+#include "vTaskDHCP.h"
 
 #define min(a, b) (((a)<(b))?(a):(b))
 static const char zeroes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -37,26 +38,23 @@ static const char zeroes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // const uint32_t max_channels = sizeof(channels) / sizeof(channels[0]);
 
 uint8_t WIZ_SPI_ReadByte(void);
-
 uint8_t WIZ_SPI_SendByte(uint8_t byte);
+void vTimerCallback(void *ptr);
 
 uint8_t do_http_get(uint8_t sn, const char *url, void (writefunc)(const char *buf, uint32_t len));
 uint8_t get_stream_from_server(uint8_t sn, const char *host, const uint8_t *ip, const uint16_t port, const char *mntpnt, const char *password, volatile uint32_t *status);
 
-struct
-{
+struct {
     queue_hdr_t hdr; // must be named "hdr"
     uint8_t items[256]; // must be named "items", 1 space wasted
 } my_TX_queue;
 
-struct
-{
+struct {
     queue_hdr_t hdr; // must be named "hdr"
     uint8_t items[128]; // must be named "items", 1 space wasted
 } my_RX_queue;
 
-struct
-{
+struct {
     queue_hdr_t hdr;
     uint8_t items[16]; // key buffer
 } my_KEYS_queue;
@@ -98,17 +96,13 @@ Als de buffer vol is worden de tekens zomaar weggegooid, jammer dan.
  */
 void SERIAL_puts(const char *s)
 {
-    while (*s)
-    {
-        if (!QUEUE_FULL(my_TX_queue))
-        {
+    while (*s) {
+        if (!QUEUE_FULL(my_TX_queue)) {
             // er is ruimte, stop teken in de queue
             QUEUE_PUT(my_TX_queue, *s);
             // volgende teken
             s++;
-        }
-        else
-        {
+        } else {
             // buffer vol, we moeten wat anders doen nu
             // deze functie blockt nu
             USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
@@ -121,18 +115,14 @@ void SERIAL_puts(const char *s)
 
 void SERIAL_write(const uint8_t *s, uint32_t len)
 {
-    while (len)
-    {
-        if (!QUEUE_FULL(my_TX_queue))
-        {
+    while (len) {
+        if (!QUEUE_FULL(my_TX_queue)) {
             // er is ruimte, stop teken in de queue
             QUEUE_PUT(my_TX_queue, *s);
             // volgende teken
             s++;
             len--;
-        }
-        else
-        {
+        } else {
             // buffer vol, we moeten wat anders doen nu
             // deze functie blockt nu
             USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
@@ -149,18 +139,14 @@ void SERIAL_write(const uint8_t *s, uint32_t len)
 void USART1_IRQHandler(void)
 {
     /* if Receive Register not empty then get byte */
-    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
-    {
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
         /* get byte */
         char ch = USART1->DR;
         /* if we want to capture data store in buffer */
-        if (recorder_active_flag)
-        {
+        if (recorder_active_flag) {
             /* lock free jack_ringbuffer is very good */
             jack_ringbuffer_write(streambuffer, &ch, 1);
-        }
-        else
-        {
+        } else {
             /* discard, TODO:  SET OVERRUN FLAG?
              * data from Encoder but transmitter already switched off, not a problem
              */
@@ -172,26 +158,20 @@ void USART1_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
     /* if Receive Register not empty then get byte */
-    if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
-    {
+    if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
         uint8_t ch = USART2->DR;
         // als de buffer niet vol dan erbij proppen, anders jammer dan, weg ermee
-        if (!QUEUE_FULL(my_RX_queue))
-        {
+        if (!QUEUE_FULL(my_RX_queue)) {
             QUEUE_PUT(my_RX_queue, ch);
         }
     }
     // moeten we wat zenden, TX empty interrupt?
-    if (USART_GetITStatus(USART2, USART_IT_TXE) != RESET)
-    {
+    if (USART_GetITStatus(USART2, USART_IT_TXE) != RESET) {
         uint8_t ch;
-        if (!QUEUE_EMPTY(my_TX_queue))
-        {
+        if (!QUEUE_EMPTY(my_TX_queue)) {
             QUEUE_GET(my_TX_queue, ch);
             USART_SendData(USART2, ch);
-        }
-        else
-        {
+        } else {
             // no data in buf, disable Transmit Data Register empty interrupt
             USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
         }
@@ -211,8 +191,7 @@ void ADC_IRQHandler(void)
     static uint32_t cnt = 0;
     char buf[20];
     // read a value from the ADC keyboard and compare to last
-    if (ADC_GetITStatus(ADC1, ADC_IT_EOC) != RESET)
-    {
+    if (ADC_GetITStatus(ADC1, ADC_IT_EOC) != RESET) {
         uint16_t val = ADC1->DR;
         uint8_t key = val2key(val);
         int i = sprintf(buf, "%5" PRIu32 " %5d %c", cnt, val, key);
@@ -228,26 +207,19 @@ static void handle_menu_channels(uint8_t key)
 {
     uint32_t n = menu_channel; // get global var
     /* kanaal selectie */
-    switch (key)
-    {
+    switch (key) {
 
     case 'D' :
-        if (n < kl_get_count() - 1)
-        {
+        if (n < kl_get_count() - 1) {
             n++;
-        }
-        else
-        {
+        } else {
             n = 0;
         }
         break;
     case 'U' :
-        if (n > 0)
-        {
+        if (n > 0) {
             n--;
-        }
-        else
-        {
+        } else {
             n = kl_get_count() - 1;
         }
         break;
@@ -266,14 +238,11 @@ static void handle_menu_channels(uint8_t key)
     lcd_set_cursor_position(&LCD, 0, 0);
     lcd_write(&LCD, p->text, strlen(p->text));
 
-    if (p->host != NULL)
-    {
+    if (p->host != NULL) {
         xprintf("channel= %s : hostname: %s\n", p->text, p->host);
         lcd_set_cursor_position(&LCD, 1, 0);
         lcd_write(&LCD, p->host, strlen(p->host));
-    }
-    else
-    {
+    } else {
         lcd_set_cursor_position(&LCD, 1, 0);
         char buf[20];
         sprintf(buf, "ip:%d.%d.%d.%d", p->ip[0], p->ip[1], p->ip[2], p->ip[3]);
@@ -288,18 +257,15 @@ static void handle_menu_volume(uint8_t key)
     /* volume */
     uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
 
-    switch (key)
-    {
+    switch (key) {
 
     case 'D' :
-        if (n < 254)
-        {
+        if (n < 254) {
             n++;
         }
         break;
     case 'U' :
-        if (n > 0)
-        {
+        if (n > 0) {
             n--;
         }
         break;
@@ -323,8 +289,7 @@ static void handle_menu_pitch(uint8_t key)
     /* volume */
     // uint8_t n = VS_Read_SCI(SCI_VOL) & 0xFF;
     static uint8_t flag = 0;
-    switch (key)
-    {
+    switch (key) {
 
     case 'D' :
         if (flag > 0) flag--;
@@ -354,12 +319,9 @@ static void handle_menu_pitch(uint8_t key)
     //char buf[20];
     //sprintf(buf, "%03d          ", 255 - playout_volume);
     const char *p ;
-    if (flag)
-    {
+    if (flag) {
         p=buf;
-    }
-    else
-    {
+    } else {
         p=b2;
     }
     lcd_write(&LCD, p, 16);
@@ -376,26 +338,19 @@ static void handle_menu_key(uint8_t key)
      * kolom 2 = pitch control
      */
     /* left right is kolom */
-    switch (key)
-    {
+    switch (key) {
     case 'L' :
-        if (kolom > 0)
-        {
+        if (kolom > 0) {
             kolom--;
-        }
-        else
-        {
+        } else {
             kolom=colmax;
         }
 
 
     case 'R' :
-        if (kolom <colmax )
-        {
+        if (kolom <colmax ) {
             kolom++;
-        }
-        else
-        {
+        } else {
             kolom=0;
         }
 
@@ -403,8 +358,7 @@ static void handle_menu_key(uint8_t key)
     }
 
 
-    switch (kolom)
-    {
+    switch (kolom) {
     case 0 :
         /* channel select */
         handle_menu_channels(key);
@@ -430,8 +384,7 @@ static void vTaskUserInterface(void *arg)
     lcd_set_cursor_position(&LCD, 0, 0);
     lcd_write(&LCD, "*Team Tweetand* ", 16); // write a string
     int x = 10;
-    while (x--)
-    {
+    while (x--) {
         lcd_set_backlight(&LCD, 0);
         vTaskDelay(100);
         lcd_set_backlight(&LCD, 1);
@@ -445,65 +398,50 @@ static void vTaskUserInterface(void *arg)
     uint8_t slowkey = 1; // double check ADC value
     handle_menu_key('-'); // initial screen
 
-    if (auto_start_first_channel == 1)
-    {
+    if (auto_start_first_channel == 1) {
         // fake the press select button
         SERIAL_write((uint8_t*)"Autostart\r\n",11);
         handle_menu_key('S'); // S is Select
     }
 
-    for (; ;)
-    {
+    for (; ;) {
         uint16_t val = adc_convert();
         uint8_t key = val2key(val); // lookup de ADC naar key
         //xprintf("%c %d %d\r\n",key,prev_key,keystate,next_state);
-        switch (keystate)
-        {
+        switch (keystate) {
         case 0:
 
-            if (key != '-')
-            {
+            if (key != '-') {
                 /* a key was pressed*/
                 prev_key = key;
-                if (slowkey)
-                {
+                if (slowkey) {
                     next_state = 1; // fast keys to to state 2, for slow keys go to state 1
-                }
-                else
-                {
+                } else {
                     SERIAL_write(&key, 1);
                     handle_menu_key(key);
                     next_state = 2; // go to state 2, skip confirmation on ADC
                 }
-            }
-            else
-            {
+            } else {
                 next_state = 0; // wait for key again
             }
             break;
 
         case 1:
-            if (key == prev_key)
-            {
+            if (key == prev_key) {
                 /* same value 2nd time, accept key */
                 SERIAL_write(&key, 1);
                 handle_menu_key(key);
                 next_state = 2;
-            }
-            else
-            {
+            } else {
                 // not same key
                 next_state = 0;
             }
             break;
 
         case 2:
-            if (key == prev_key)
-            {
+            if (key == prev_key) {
                 next_state = 2; /* hang here until other value appears */
-            }
-            else
-            {
+            } else {
                 /* wait for keypress again */
                 next_state = 0;
             }
@@ -516,39 +454,6 @@ static void vTaskUserInterface(void *arg)
     }
 }
 
-static uint32_t wiz_hardware_reset_chip()
-{
-    // reset the chip, pull RSn low and release
-    GPIO_WriteBit(GPIOA, GPIO_Pin_12, 0); // RESET
-    vTaskDelay(1); // minimaal 500 us
-    GPIO_WriteBit(GPIOA, GPIO_Pin_12, 1); // not RESET
-    // wait for RDY signal to activate
-    uint32_t count = 100; // dit duurt normaal 33 ms (max 50 volgens spec) we nemen 100ms als maximum, daarna is er iets mis
-    // wachten tot RDY signaal hoog wordt
-    while (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_15) == RESET)
-    {
-        vTaskDelay(1); // 1 ms
-        count--;
-        if (count == 0)
-        {
-            break;
-        }
-    }
-    // niet op tijd hoog geworden, hardware fail ofzo
-    if (count == 0)
-    {
-        // timeout in reset van de wizchip handle dit later
-        SERIAL_puts("Wiz Reset Timeout");
-        return -1; // error
-    }
-    else
-    {
-        /* dat werkte dus goed */
-        wiz_NetTimeout xx = { .retry_cnt = 0x08, .time_100us = 0x07d0 };
-        ctlnetwork( CN_SET_TIMEOUT, &xx);
-    }
-    return 0; // ok
-}
 
 /* USART1 connects to Vs1063, pins PB6 (not used) and PB7 */
 void USART1_hardware_init(uint32_t baudrate)
@@ -656,335 +561,9 @@ void USART2_hardware_init(uint32_t baudrate)
     USART_Cmd(USART2, ENABLE); //Enable USART2
 }
 
-void init_Wiz_SPI_GPIO(void)
-{
-    // de wiznet zit op SPI 1
-
-    // en de CS zit op PA13 (out)
-    // de Int zit op PA14 (in)
-    // de Rdy zit op PA15 (in)
-    // de Reset zit op PA12 (out)
-
-    /**SPI1 GPIO Configuration
-    PA5     ------> SPI1_SCK
-    PA6     ------> SPI1_MISO
-    PA7     ------> SPI1_MOSI
-    */
-
-    GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO
-    SPI_InitTypeDef SPI_InitStruct;
-
-    // enable Clocks for APB1 and GPIOA
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-    /* defaults in struct */
-    GPIO_StructInit(&GPIO_InitStruct);
-
-    /* set up GPIO pins */
-
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7; // Pins 2 (TX) and 3 (RX) are used
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    // map de pin naar de SPI functie
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource5, GPIO_AF_SPI1); //
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_SPI1); //
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_SPI1); //
-    // de CS pin op PA11 is output
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_11 | GPIO_Pin_12; // Pins 12 RESET en 11 CS
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-    // de inputs
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15; /*  | GPIO_Pin_10 */ // Pins 10 : Int en Pin 15 : RDY
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    // enable the SPI clocks
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE); // for SPI1
-    // set the SPI parameters to sane defaults
-    SPI_StructInit(&SPI_InitStruct);
-    // fill in the blanks
-    SPI_InitStruct.SPI_Direction = SPI_Direction_2Lines_FullDuplex; // set to full duplex
-    SPI_InitStruct.SPI_Mode = SPI_Mode_Master; // transmit in master mode
-    SPI_InitStruct.SPI_DataSize = SPI_DataSize_8b; // one packet of data is 8 bits wide
-    SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low; // clock is low when idle
-    SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge; // data sampled at first edge
-    SPI_InitStruct.SPI_NSS = SPI_NSS_Soft; // set the NSS to software
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4; // SPI_BaudRatePrescaler_4; // 56; // SPI frequency is
-    SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB; // data is transmitted MSB first
-    SPI_Init(SPI1, &SPI_InitStruct);
-
-    SPI_Cmd(SPI1, ENABLE); // enable SPI1
-
-}
-
-void wiz_chip_select(void)
-{
-    // PA11 modify for your hardware
-    GPIO_WriteBit(GPIOA, GPIO_Pin_11, 0);
-}
-
-void wiz_chip_deselect(void)
-{
-    // PA11 modify for your hardware
-    GPIO_WriteBit(GPIOA, GPIO_Pin_11, 1);
-}
-
-void wizchip_lock(void)
-{
-    xSemaphoreTake(xSemaphoreWIZCHIP, 5000);
-}
-
-void wizchip_unlock(void)
-{
-    xSemaphoreGive(xSemaphoreWIZCHIP);
-}
-
-/**
-* @brief  Reads a byte from the SPI .
-* @param  None
-* @retval Byte Read from the SPI .
-*/
-
-uint8_t WIZ_SPI_ReadByte(void)
-{
-    return (WIZ_SPI_SendByte(0));
-}
-
-/**
-* @brief  Sends a byte through the SPI interface and return the byte received
-*         from the SPI bus.
-* @param  byte: byte to send.
-* @retval The value of the received byte.
-*/
-uint8_t WIZ_SPI_SendByte(uint8_t byte)
-{
-    /*!< Loop while DR register in not empty */
-    while (SPI_I2S_GetFlagStatus(WIZNET_SPI, SPI_I2S_FLAG_TXE) == RESET);
-
-    /*!< Send byte through the SPI1 peripheral */
-    SPI_I2S_SendData(WIZNET_SPI, byte);
-
-    /*!< Wait to receive a byte */
-    while (SPI_I2S_GetFlagStatus(WIZNET_SPI, SPI_I2S_FLAG_RXNE) == RESET);
-
-    /*!< Return the byte read from the SPI bus */
-    return SPI_I2S_ReceiveData(WIZNET_SPI);
-}
-
-
-static void vTaskDHCP(void *arg)
-{
-    (void) arg; /* unused */
-    /* de netwerk config moet uit een eeprom komen, mogeljk later een 24c32 erbij bakken op de i2c bus */
-
-    uint32_t netconfig = NETINFO_DHCP; /* NETINFO_STATIC */
-//   uint8_t old_ip_address[4] = {0};   /* het IP van de PIC */
-    uint8_t old_mac_address[6] = {0};  /* het MAC van de PIC */
-
-
-    /* netwerk buffer sizes per socket */
-    uint8_t buffsizes[2][8] =
-    {
-        // {2, 2, 2, 2, 2, 2, 2, 2},
-        // {2, 2, 2, 2, 2, 2, 2, 2}
-        {4, 4, 4, 4, 0, 0, 0, 0},
-        {4, 4, 4, 4, 0, 0, 0, 0}
-
-    };
-
-    wiz_NetInfo ni =   // new network info, we copy the MAC from eeprom
-    {
-        .mac = {0, 0, 0, 0, 0, 0},
-        .ip =  {192, 168, 1, 3},
-        .sn =  {255, 255, 255, 0},
-        .gw =  {192, 168, 1, 1},
-        .dns = {8, 8, 8, 8},
-        .dhcp = 1 // 1=static 2=dhcp 0=undefined
-    };
-
-    /* hardware initialisatie */
-
-    init_Wiz_SPI_GPIO();
-    /* callbacks toekennen voor chipselect, zend en ontvang byte van SPI */
-    reg_wizchip_cris_cbfunc(wizchip_lock, wizchip_unlock);
-    reg_wizchip_cs_cbfunc(wiz_chip_select, wiz_chip_deselect);
-    reg_wizchip_spi_cbfunc(WIZ_SPI_ReadByte, /* read single byte */
-                           WIZ_SPI_SendByte /* send single byte */
-                          );
-
-    /* reset w550io hardware module, dit laadt de defaults */
-    wiz_hardware_reset_chip();
-
-    /* ik kan nu de data uit de chip lezen voor later gebruik */
-    /* allocate memory for temp buffer */
-    wiz_NetInfo *netinfo = pvPortMalloc(sizeof(wiz_NetInfo));
-    if (netinfo)
-    {
-        ctlnetwork(CN_GET_NETINFO, netinfo); // GET info from chip
-
-        int i;
-        for (i = 0; i < 6; i++)
-        {
-            old_mac_address[i] = netinfo->mac[i]; // copy de gekregen MAC in de nieuwe structure
-        }
-
-        //    for (i=0; i<4; i++) {
-        //        old_ip_address[i] = netinfo->ip[i]; // copy de gekregen IP
-        //    }
-
-        /* free buffer */
-        vPortFree(netinfo);
-    }
-
-    /* PHY link status check, wacht tot link online is, na 2 sec een melding op serial port */
-
-    uint32_t tmp = 0;
-    TickType_t timeout = xTaskGetTickCount() + 2000;
-
-    do
-    {
-        if (ctlwizchip(CW_GET_PHYLINK, &tmp) == -1)
-        {
-            SERIAL_puts("Unknown PHY Link status.\r\n");
-        }
-
-        vTaskDelay(1); // boring stuff nothing
-        TickType_t t = xTaskGetTickCount();
-        if (t > timeout)
-        {
-            SERIAL_puts("Check network cable\r\n");
-            lcd_home(&LCD);
-            lcd_set_cursor_position(&LCD, 0, 0);
-            const char *xtxt = "Check Netw Cable";
-            lcd_write(&LCD, xtxt, strlen(xtxt));
-            timeout = t + 2000;
-        }
-    }
-    while (tmp == PHY_LINK_OFF);
-
-    /* als we hier komen zit er een stekker in de UTP met signalen */
-
-    ctlwizchip(CW_INIT_WIZCHIP, buffsizes); // set up the buffer sizes inside the chip
-
-    SERIAL_puts("=== before configure ==\r\n");
-    dump_network_info(SERIAL_puts); // gebruik een callback voor de output
-
-    /* ik wil nu of STATIC of DHCP doen */
-
-    if (netconfig != NETINFO_DHCP)
-    {
-        /* haal de static settings op uit de eeprom en stop die in de chip, TODO, nog een eeprom */
-        int i;
-        for (i = 0; i < 6; i++)
-        {
-            ni.mac[i] = old_mac_address[i];
-        }
-        ctlnetwork(CN_SET_NETINFO, &ni);
-        SERIAL_puts("\r\n=== after configure ==\r\n");
-        dump_network_info(SERIAL_puts); // gebruik een callback voor de output
-
-        SERIAL_puts("\r\n");
-    }
-    else
-    {
-        /* we doen DHCP */
-        /* buffer maken */
-        uint8_t *gDATABUF = pvPortMalloc(2048);  // dit moet niet zo groot zijn....
-        DHCP_init(0, gDATABUF, 0x72345678 ^ xTaskGetTickCount()); // use socket 0 voor alle DHCP dingen
-        /* Loop until we know DHCP is ok or failed */
-        uint8_t dhcp_ret;
-
-        while (1)
-        {
-            /* DHCP */
-            char txt[20];
-            /* DHCP IP allocation and check the DHCP lease time (for IP renewal) */
-            dhcp_ret = DHCP_run(); // call state machine
-            sprintf(txt, "dhcp=%d\r\n", dhcp_ret);
-            SERIAL_puts(txt);
-            /* normal value would be waiting for lease to expire, 4  */
-            if (dhcp_ret == DHCP_IP_LEASED)
-            {
-                // dan doen we niks behalve slapen, 60 seconden en nog eens kijken
-                // vTaskDelay(10000);
-                vTaskDelay(60000);
-            }
-            /* in het begin zijn we bezig met de DHCP server, dan krijgen we 1 terug */
-            if (dhcp_ret == DHCP_RUNNING)
-            {
-                // nog geen IP gekregen, wacht nu 100 ms en kijk of er een antwoord is
-                vTaskDelay(100);
-            }
-
-            // indien succes of andere IP, dan dit toekennen, dit is slechts de eerste keer
-            // en dan na een dag of week of zoiets
-            if ((dhcp_ret == DHCP_IP_ASSIGN) || (dhcp_ret == DHCP_IP_CHANGED))
-            {
-                /* IP etc van de DHCP server */
-                getIPfromDHCP(ni.ip);
-                getGWfromDHCP(ni.gw);
-                getSNfromDHCP(ni.sn);
-                getDNSfromDHCP(ni.dns);
-
-                ni.dhcp = NETINFO_DHCP;
-                /* de MAC moet ook gezet worden, gebruik de oude MAC */
-                int i;
-                for (i = 0; i < 6; i++)
-                {
-                    ni.mac[i] = old_mac_address[i];
-                }
-
-                /* zet nu alle netwerk info in de chip */
-                ctlnetwork(CN_SET_NETINFO, &ni);
-
-                // display_netinfo();
-
-                SERIAL_puts("DHCP Leased Time : ");
-                char txt[20];
-                sprintf(txt, "%ld Sec\r\n", getDHCPLeasetime());
-                SERIAL_puts(txt);
-                dump_network_info(SERIAL_puts); // gebruik een callback voor de output
-
-                SERIAL_puts("\r\n");
-                // flag other waiting threads, network is up
-                xEventGroupSetBits(xEventBits, 0x01); // set network bit TODO make CONST
-            }
-
-            if (dhcp_ret == DHCP_FAILED)
-            {
-                SERIAL_puts(">> DHCP Failed\r\n");
-                /* we kunnen nu de eeprom gebruiken of de opgeslagen IP of we kunnen UPNP gaan proberen TODO later */
-                // User's parts : DHCP failed
-                // ===== Example pseudo code =====
-                // netconfig = NETINFO_STATIC;
-                // set_netinfo_default();
-                xEventGroupSetBits(xEventBits, 0x01); // set network bit TODO make CONST
-            }
-        } // while
-        // free memory
-        vPortFree(gDATABUF);
-    }
-}
-
-void vTimerCallback(void *ptr)
-{
-    (void) ptr; /*unused*/
-    DHCP_time_handler();
-    DNS_time_handler();
-    /* add music player timers here too ? */
-}
-
 uint8_t VS_Get_Serial_Byte(void)
 {
-    while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
-    {
+    while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET) {
         /* spin here */
     };
     uint8_t t = USART_ReceiveData(USART1) & 0xFF;
@@ -1006,20 +585,16 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 
     uint8_t *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
     uint8_t dns_counter = 0;
-    while (dns_counter < 2)
-    {
+    while (dns_counter < 2) {
         // init dns request
         DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
         // do the request on given server
         int8_t rvx = DNS_run(mijn_dns[dns_counter], host, host_ip);
-        if (rvx == 0)
-        {
+        if (rvx == 0) {
             xprintf("ip=%3d.%3d.%3d.%3d\r\n", host_ip[0], host_ip[1], host_ip[2], host_ip[3]);
             // vPortFree(buf_dns);
             break;
-        }
-        else
-        {
+        } else {
             //  vPortFree(buf_dns);
             xprintf("dns error %d\r\n", rvx);
             //  return -1;
@@ -1027,8 +602,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         dns_counter++;
     }
     vPortFree(buf_dns);
-    if (dns_counter == 2)
-    {
+    if (dns_counter == 2) {
         xprintf("fatal DNS problem\r\n");
     }
 
@@ -1044,8 +618,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
     char *auth1 = pvPortMalloc(256); // pak buf van systeem
     char *auth2 = pvPortMalloc(256); // pak buf van systeem
 
-    if (buf == NULL || auth1 == NULL || auth2 == NULL)
-    {
+    if (buf == NULL || auth1 == NULL || auth2 == NULL) {
         // out of memory
         vPortFree(buf);
         vPortFree(auth1);
@@ -1078,44 +651,35 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 
     uint16_t len = getSn_RX_RSR(sn);
     uint32_t timeout = 5000;
-    while ((len < 13) && (timeout != 0))
-    {
+    while ((len < 13) && (timeout != 0)) {
         len = getSn_RX_RSR(sn);
         vTaskDelay(1);
         timeout--;
 
-        if (*status)
-        {
+        if (*status) {
             break;
         }
     }
 
-    if (*status)
-    {
+    if (*status) {
         /* cleanup and exit */
 
     }
 
-    if (timeout == 0)
-    {
+    if (timeout == 0) {
         return -2;
     }
 
     len = recv(sn, buf, bufsize, 5000); // 5 sec timeout
 
-    if (!strncmp(buf, "HTTP/1.0 200 ", 13))
-    {
+    if (!strncmp(buf, "HTTP/1.0 200 ", 13)) {
         // ok
         // start sending data now
-    }
-    else if (!strncmp(buf, "HTTP/1.0 401 ", 13))
-    {
+    } else if (!strncmp(buf, "HTTP/1.0 401 ", 13)) {
         // bad password
         xprintf("bad pasword\r\n");
         return -3;
-    }
-    else if (!strncmp(buf, "HTTP/1.0 403 ", 13))
-    {
+    } else if (!strncmp(buf, "HTTP/1.0 403 ", 13)) {
         // mountpoint busy
         xprintf("mountpoint busy\r\n");
         return -4;
@@ -1126,8 +690,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
     streambuffer = jack_ringbuffer_create(32768); // global variable
     //xprintf("sb=%x",streambuffer);
 
-    if (buf && rp && streambuffer)
-    {
+    if (buf && rp && streambuffer) {
         /* zet volume zacht van de output */
         VS_Volume_Set(0x2020);
         xprintf("rec test serial %d\r\n", bufsize);
@@ -1141,32 +704,25 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         /* data starts flowing into usart 1 now */
         // int n = 0;
         int nn = 0;
-        while (1)
-        {
+        while (1) {
 
-            if (*status)
-            {
+            if (*status) {
                 break;
             }
 
-            if (jack_ringbuffer_read_space(streambuffer) > bufsize)
-            {
+            if (jack_ringbuffer_read_space(streambuffer) > bufsize) {
                 // we have data in the buffer for the network
                 jack_ringbuffer_read(streambuffer, buf, bufsize);
                 int32_t x = send(sn, buf, bufsize);
-                if (x < 0)
-                {
+                if (x < 0) {
                     xprintf("transmission end\r\n");
                     break;
                 }
                 xprintf("x\r\n");
 
-            }
-            else
-            {
+            } else {
                 nn++;
-                if (nn == 10)
-                {
+                if (nn == 10) {
                     size_t inbuf = jack_ringbuffer_read_space(streambuffer);
                     size_t frbuf = jack_ringbuffer_write_space(streambuffer);
                     //int fullness = inbuf <<2  / bufsize << 2;
@@ -1191,20 +747,17 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         VS_Write_SCI(SCI_MODE, VS_Read_SCI(SCI_MODE) | SM_CANCEL);
         xprintf("wait enc stop\r\n");
         /* wait until encoder really stopped */
-        do
-        {
+        do {
             int x = VS_Read_SCI(SCI_RECWORDS);
             xprintf("x in encoder =%d\r\n", x);
-        }
-        while (VS_Read_SCI(SCI_MODE) & SM_CANCEL);
+        } while (VS_Read_SCI(SCI_MODE) & SM_CANCEL);
 
         xprintf("enc is stop\r\n");
 
         /* If using SCI for data transfers, read all remaining words using SCI_HDAT1/SCI_HDAT0. */
         int x = VS_Read_SCI(SCI_RECWORDS);
         xprintf("still in encoder =%d\r\n", x);
-        while (x)
-        {
+        while (x) {
             // uint16_t w =
             VS_Read_SCI(SCI_RECDATA);
             //    *rbp++ = (uint8_t)(w >> 8);
@@ -1228,12 +781,10 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
         /* When all samples have been transmitted, SM_ENCODE bit of SCI_MODE will be
         cleared by VS1063a, and SCI_HDAT1 and SCI_HDAT0 are cleared.
         */
-        do
-        {
+        do {
             int x = VS_Read_SCI(SCI_RECWORDS);
             xprintf("x in encoder =%d\r\n", x);
-        }
-        while (VS_Read_SCI(SCI_MODE) & SM_ENCODE);
+        } while (VS_Read_SCI(SCI_MODE) & SM_ENCODE);
 
 
         /* free streambuffer memory */
@@ -1244,6 +795,189 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
     return rv;
 }
 
+
+uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
+{
+    // create buffer
+    /* start data pump here */
+    radio_player_t *rp = pvPortMalloc(sizeof(radio_player_t));
+    streambuffer = jack_ringbuffer_create(32768); // global variable
+    //xprintf("sb=%x",streambuffer);
+
+    // VS_Hard_Reset();
+    if ( rp && streambuffer) {
+
+        int_fast8_t bezigblijven = 1;
+        int_fast8_t listening = 0;
+        int_fast8_t nn = 0;
+
+        while (bezigblijven) {
+            VS_Registers_Init();
+            /* zet volume zacht van de output */
+            VS_Volume_Set(0x4040);
+            // xprintf("rec test serial %d\r\n", bufsize);
+            memset(rp, 0, sizeof(radio_player_t));
+            rp->devicemode = DevMode_TX_Ice_Serial;
+            rp->use_line_input = 0; /* set to 1 if needed */
+            rp->encoding_preset = 0; // mp3, low Q
+            xprintf("tx via serial\r\n");
+            recorder_active_flag = 1; // we have a ringbuffer so start using it
+            VS_Encoder_Init(rp);
+
+            /* data starts flowing into usart 1 now */
+            // int n = 0;
+            // int nn = 0;
+
+            while (1) {
+
+                if (*status) {
+                    bezigblijven = 0; /* break parrot loop */
+                    break;
+                }
+
+                /* we wachten tot er voldoende volume is gezien, we discarden alle data */
+                /* check level of the recording */
+                uint32_t lrmax = VS_Read_mem32(PAR_ENC_CHANNEL_MAX);
+                uint16_t level = (uint16_t) lrmax & 0xFFFF;
+//                xprintf("max = %u %u\r\n", (uint16_t) lrmax & 0xFFFF );
+                VS_Write_mem32(PAR_ENC_CHANNEL_MAX, 0x00000000);
+
+                if (level < 2000 && listening == 0) {
+                    /* level niet gezien, alle data weggooien van de opname */
+                    jack_ringbuffer_read_advance(streambuffer,jack_ringbuffer_read_space (streambuffer));
+                    // xprintf("silence\r\n");
+                    vTaskDelay(10);
+                } else {
+                    /* level gezien, opname starten */
+                    listening = 1;
+                    break;
+                }
+            }
+
+
+            while (listening) {
+
+                size_t inbuf = jack_ringbuffer_read_space(streambuffer);
+                size_t frbuf = jack_ringbuffer_write_space(streambuffer);
+                //int fullness = inbuf <<2  / bufsize << 2;
+                char tt[32];
+                sprintf(tt, "%5d %5d\r\n", inbuf, frbuf);
+                SERIAL_puts(tt);
+
+                vTaskDelay(10); //
+
+                // nu kijken of er een maximum van < 2000 in buffer zit, dan ook stoppen met opname
+                /* check level of the recording */
+                uint32_t lrmax = VS_Read_mem32(PAR_ENC_CHANNEL_MAX);
+                uint16_t level = (uint16_t) lrmax & 0xFFFF;
+//                xprintf("max = %u %u\r\n", (uint16_t) lrmax & 0xFFFF );
+                VS_Write_mem32(PAR_ENC_CHANNEL_MAX, 0x00000000);
+
+                if (level < 2000 && listening == 1) {
+                    nn++;
+                    if (nn > 100) {
+                        listening = 0; /* niet meer luisteren */
+                        nn=0;
+                        xprintf("silence quit rec\r\n");
+                        break;
+                    }
+                }
+
+                frbuf = jack_ringbuffer_write_space(streambuffer);
+                if (frbuf == 0) {
+                    xprintf("buffer vol\n");
+                    listening = 0; /* niet meer luisteren */
+                    break;
+                }
+            }
+
+
+            /* signal encoder to stop set cancel flag */
+            /*spec page 57 */
+            /*
+            When you want to finish encoding a file, set bit SM_CANCEL in SCI_MODE.
+            After a while (typically less than 100 ms), SM_CANCEL will clear.
+            */
+            VS_Write_SCI(SCI_MODE, VS_Read_SCI(SCI_MODE) | SM_CANCEL);
+            xprintf("wait enc stop\r\n");
+            /* wait until encoder really stopped */
+            do {
+                int x = VS_Read_SCI(SCI_RECWORDS);
+                xprintf("x in encoder =%d\r\n", x);
+            } while (VS_Read_SCI(SCI_MODE) & SM_CANCEL);
+
+            xprintf("enc is stop\r\n");
+
+            /* If using SCI for data transfers, read all remaining words using SCI_HDAT1/SCI_HDAT0. */
+            int x = VS_Read_SCI(SCI_RECWORDS);
+            xprintf("still in encoder =%d\r\n", x);
+            while (x) {
+                // uint16_t w =
+                VS_Read_SCI(SCI_RECDATA);
+                //    *rbp++ = (uint8_t)(w >> 8);
+                //    *rbp++ = (uint8_t)(w & 0xFF);
+                x--;
+            }
+            x = VS_Read_SCI(SCI_RECWORDS);
+            xprintf("yet still in encoder =%d\r\n", x);
+
+            /*
+            Then read parametric_x.endFillByte.
+            If the most significant bit (bit 15) is set to 1, then the file is of an odd length
+            and bits 7:0 contain the last byte that still should be written
+            to the output file. Now write 0 to endFillByte.
+            */
+            uint16_t endfilbyte = VS_Read_Mem(PAR_END_FILL_BYTE); /* 0x1e06*/
+            xprintf("endfil = %d\r\n", endfilbyte);
+            // VS_Write_SDI(0);
+            // VS_Write_SDI(0);
+
+            /* When all samples have been transmitted, SM_ENCODE bit of SCI_MODE will be
+            cleared by VS1063a, and SCI_HDAT1 and SCI_HDAT0 are cleared.
+            */
+            do {
+                int x = VS_Read_SCI(SCI_RECWORDS);
+                xprintf("x in encoder =%d\r\n", x);
+            } while (VS_Read_SCI(SCI_MODE) & SM_ENCODE);
+
+            /* set flag so irq not pushes data into buffer anymore */
+            vTaskDelay(20);
+            recorder_active_flag = 0;
+            /* nu de playback zooi */
+            // VS_cancel_stream();
+            VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
+            VS_Volume_Set((playout_volume << 8) | playout_volume);
+            VS_PitchControl_Set( 6 /*10*/);
+            player_active_flag=1;
+            while (1) {
+                taskYIELD();
+                size_t inbuf = jack_ringbuffer_read_space(streambuffer);
+                if (inbuf == 0) {
+                    xprintf("WTF hh %d\r\n",inbuf);
+                    break;
+                }
+            }
+            player_active_flag=0;
+
+            while (player_running) {
+                /* wait until player flushed everything */
+                taskYIELD();
+            }
+
+        }
+        /* free streambuffer memory */
+        jack_ringbuffer_free(streambuffer);
+        vPortFree(rp);
+        // VS_PitchControl_Set(0);
+        // vPortFree(buf);
+        // put stuff in buffer until full
+        // play buffer until empty
+    } else {
+        /* no memory for parrot */
+    }
+
+    return 0;
+}
 
 uint8_t send_stream(const struct channel *p, volatile uint32_t *status)
 {
@@ -1284,16 +1018,13 @@ get_stream_from_server(uint8_t sn, const char *host,
     //  DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF ); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
     // do the request on given server
 
-    if (host == NULL)
-    {
+    if (host == NULL) {
         /* use bare IP */
         host_ip[0] = ip[0];
         host_ip[1] = ip[1];
         host_ip[2] = ip[2];
         host_ip[3] = ip[3];
-    }
-    else
-    {
+    } else {
 
         uint8_t mijn_dns[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}};
 
@@ -1305,27 +1036,22 @@ get_stream_from_server(uint8_t sn, const char *host,
 
         uint8_t *buf_dns = pvPortMalloc(MAX_DNS_BUF_SIZE);
         uint8_t dns_counter = 0;
-        while (dns_counter < 2)
-        {
+        while (dns_counter < 2) {
             // init dns request
             DNS_init(1, buf_dns, xTaskGetTickCount() & 0xFFFF); // gebruik voor DNS socket 1, 0 is in gebruik voor dhcp die af en toe kan zenden en ontvangen
             // do the request on given server
             int8_t rvx = DNS_run(mijn_dns[dns_counter], host, host_ip);
-            if (rvx == 0)
-            {
+            if (rvx == 0) {
                 xprintf("ip=%3d.%3d.%3d.%3d\r\n", host_ip[0], host_ip[1], host_ip[2], host_ip[3]);
                 //vPortFree(buf_dns);
                 break;
-            }
-            else
-            {
+            } else {
                 xprintf("dns error %d\r\n", rvx);
             }
             dns_counter++;
         }
         vPortFree(buf_dns);
-        if (dns_counter == 2)
-        {
+        if (dns_counter == 2) {
             xprintf("dns fatal error\r\n");
             return -1;
         }
@@ -1367,8 +1093,7 @@ get_stream_from_server(uint8_t sn, const char *host,
     const uint16_t bufsize = 2048; // size of buf in Wiznet voor deze socket
 
     char *buf = pvPortMalloc(bufsize); // pak buf van systeem
-    if (buf == NULL)
-    {
+    if (buf == NULL) {
         goto cleanup;
     }
 
@@ -1401,8 +1126,7 @@ get_stream_from_server(uint8_t sn, const char *host,
     // skip header TODO TODO
     streambuffer = jack_ringbuffer_create(65535); // global variable
     // failed to create streambuffer
-    if (streambuffer == NULL)
-    {
+    if (streambuffer == NULL) {
         goto cleanup;
     }
 
@@ -1410,11 +1134,9 @@ get_stream_from_server(uint8_t sn, const char *host,
     uint32_t error = 0;
 
     /* while we need to play this station continue */
-    do
-    {
+    do {
 
-        if (*status)
-        {
+        if (*status) {
             break;
         }
 
@@ -1423,64 +1145,49 @@ get_stream_from_server(uint8_t sn, const char *host,
 
         uint32_t bf = jack_ringbuffer_write_space(streambuffer);
         uint32_t read_this_many;
-        if (bufsize < bf)
-        {
+        if (bufsize < bf) {
             // read max buffer size if we have space
             read_this_many = bufsize;
-        }
-        else
-        {
+        } else {
             // read available space maximal
             read_this_many = bf;
         }
 
-        if (read_this_many == 0)
-        {
+        if (read_this_many == 0) {
             // de buffer is vol, we moeten even niet lezen
             taskYIELD(); // geef de consumer ruimte
-        }
-        else
-        {
+        } else {
 
             xprintf("still free: %d %" PRIu32 "\r\n",jack_ringbuffer_write_space(streambuffer),read_this_many);
             got_bytes = recv(sn, buf, read_this_many, 5000); // 5 sec timeout
 
-            if (got_bytes > 0)
-            {
+            if (got_bytes > 0) {
                 // put into ring buffer
                 //
-                if (jack_ringbuffer_write_space(streambuffer) >= (size_t) got_bytes)
-                {
+                if (jack_ringbuffer_write_space(streambuffer) >= (size_t) got_bytes) {
                     size_t stuffed = jack_ringbuffer_write(streambuffer,buf,(size_t)got_bytes);
-                    if (stuffed < (size_t) got_bytes)
-                    {
+                    if (stuffed < (size_t) got_bytes) {
                         // corruption
                         xprintf("FATAL corruption\r\n");
                     }
                     player_active_flag = 1;
                     taskYIELD(); // geef de consumer ruimte
-                }
-                else
-                {
+                } else {
                     // no space in buffer get out
                     taskYIELD();
                 }
-            }
-            else
-            {
+            } else {
                 // network error or end of stream
                 error=1;
             }
         }
-    }
-    while (error == 0);
+    } while (error == 0);
 
     player_active_flag=0; // stop playout
 
     // wait for player to finish
 
-    while (player_running == 1)
-    {
+    while (player_running == 1) {
         taskYIELD();
     }
 
@@ -1488,8 +1195,7 @@ cleanup:
 
     vPortFree(buf); // en terug aan systeem
     player_active_flag=0; // stop playout
-    if (streambuffer != NULL)
-    {
+    if (streambuffer != NULL) {
         jack_ringbuffer_free(streambuffer);
     }
 
@@ -1505,21 +1211,17 @@ void vTaskPlayer(void *pvParameters)
     char *buf;
     const uint32_t bufsize = 2048;
     buf=pvPortMalloc(bufsize);
-    if (buf==NULL)
-    {
+    if (buf==NULL) {
         xprintf("out of memory XXX");
         goto cleanup;
     }
 
-    while (1)
-    {
+    while (1) {
 
-        if (player_active_flag)
-        {
+        if (player_active_flag) {
             // get stuff from ringbuffer and push it to the vs1063
             // we changed state
-            if (player_running == 0)
-            {
+            if (player_running == 0) {
                 // we started now
 
                 // init the vs1063 if needed
@@ -1530,17 +1232,16 @@ void vTaskPlayer(void *pvParameters)
             uint32_t bc = jack_ringbuffer_read(streambuffer,buf,bufsize);
             VS_SDI_Write_Buffer(buf, bc);
 
-        }
-        else
-        {
-            if (player_running)
-            {
+        } else {
+            if (player_running) {
                 // cleanup
-                player_running = 0;
+
                 uint32_t tmp = jack_ringbuffer_read_space(streambuffer);
                 jack_ringbuffer_read_advance(streambuffer,tmp);
                 // flush zero's to vs1063
                 // signal other tasks we are NOT using the ringbuffer
+                VS_flush_buffers();
+                player_running = 0;
             }
 
             // sleep
@@ -1560,8 +1261,8 @@ void vTaskApplication(void *pvParameters)
     (void)pvParameters;
     /* we gaan hier blocken tot dat de vlag van de Netwerk Bit 0x01 gezet is */
 
-    EventBits_t xx = xEventGroupWaitBits(xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY);
-    (void) xx;
+    //EventBits_t xx = xEventGroupWaitBits(xEventBits, 0x01, pdFALSE, pdFALSE, portMAX_DELAY);
+    //(void) xx;
 
     SERIAL_puts("Network flag is OK\r\n");
     VS_Hard_Reset();
@@ -1580,20 +1281,16 @@ void vTaskApplication(void *pvParameters)
     VS_Volume_Set((playout_volume << 8) | playout_volume);
     //VS_PitchControl_Set(1); /* set pitch up == on */
 
-    while (1)
-    {
+    while (1) {
         /* check nieuwe task */
-        if (change_status)
-        {
+        if (change_status) {
             change_status = 0;
             const struct channel *p = kl_get_channel(active_channel);// channels + active_channel;
 
-            if (p->mode == pm_listening)
-            {
+            if (p->mode == pm_listening) {
                 int8_t rv = receive_stream(p, &change_status); // runs until change_status==1
 
-                if ( rv < 0)
-                {
+                if ( rv < 0) {
                     xprintf("rv<0 on receive_stream what now?\n");
                 }
 
@@ -1603,14 +1300,27 @@ void vTaskApplication(void *pvParameters)
                 // VS_PitchControl_Set(1); /* set pitch up == on */
             }
 
-            if (p->mode == pm_sending)
-            {
+            if (p->mode == pm_sending) {
                 send_stream(p, &change_status);
                 VS_cancel_stream();
                 VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
                 VS_Volume_Set((playout_volume << 8) | playout_volume);
                 // VS_PitchControl_Set(1); /* set pitch up == on */
             }
+
+            if (p->mode == pm_parrot) {
+                // detect level ??
+
+                // record into buffer
+                int8_t rv = parrot_stream(p, &change_status); // runs until change_status==1
+
+                if ( rv < 0) {
+                    xprintf("rv<0 on parrot_stream what now?\n");
+                }
+                // play out buffer
+            }
+
+
         }
     }
 }
@@ -1661,11 +1371,9 @@ int main(void)
     xSemaphoreWRAM = xSemaphoreCreateMutex(); // internal ram of VS1063 protection
     xSemaphoreWIZCHIP = xSemaphoreCreateMutex(); // internal registers of W5500 protection
 
-    if (xSemaphoreSPI2 == NULL || xSemaphoreWRAM == NULL || xSemaphoreWIZCHIP == NULL)
-    {
+    if (xSemaphoreSPI2 == NULL || xSemaphoreWRAM == NULL || xSemaphoreWIZCHIP == NULL) {
         SERIAL_puts("Out of memory. xSemaphoreCreateMutex\r\n");
-        while (1)
-        {
+        while (1) {
             // we do not get here
         }
 
@@ -1673,12 +1381,10 @@ int main(void)
 
     /* maak mutexen en event groups etc */
     xEventBits = xEventGroupCreate();
-    if (xEventBits == NULL)
-    {
+    if (xEventBits == NULL) {
         // fatal error, no memory, hang here
         SERIAL_puts("Out of memory. xEventGroupCreate\r\n");
-        while (1)
-        {
+        while (1) {
             // we do not get here
         }
     }
@@ -1696,14 +1402,13 @@ int main(void)
     xTaskCreate(vTaskApplication, "App", 1024, NULL, 0, NULL);
     xTaskCreate(vTaskPlayer,"PlayOut",512,NULL,0,NULL);
 
-    xTaskCreate(vTaskDHCP, "DHCP", 512, NULL, 0, NULL); /* stack must be large or crash will happen was 256*/
+    xTaskCreate(vTaskDHCP, "DHCP", 256, NULL, 0, NULL); /* stack must be large or crash will happen was 256*/
     // assert_failed("Test 1235", 8888);
 
     vTaskStartScheduler();
     /* Infinite loop */
 
-    while (1)
-    {
+    while (1) {
         // we do not get here
     }
 }
@@ -1736,10 +1441,8 @@ void assert_failed(uint8_t *file, uint32_t line)
 
     char *s = (char *) file;
     USART_ITConfig(USART2, USART_IT_TXE | USART_IT_RXNE, DISABLE);
-    while (*s)
-    {
-        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
-        {
+    while (*s) {
+        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET) {
             ;
         }
         USART_SendData(USART2, *s);
@@ -1748,21 +1451,26 @@ void assert_failed(uint8_t *file, uint32_t line)
 
     snprintf( AssertStringBuffer, sizeof(AssertStringBuffer) , " %" PRIu32, line);
     s = AssertStringBuffer;
-    while (*s)
-    {
-        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
-        {
+    while (*s) {
+        while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET) {
             ;
         }
         USART_SendData(USART2, *s);
         s++;
     }
 
-    while (1)
-    {
+    while (1) {
         /* hang here so we can attach a debugger */
     }
 }
 
 #endif
 
+
+void vTimerCallback(void *ptr)
+{
+    (void) ptr; /*unused*/
+    DHCP_time_handler();
+    DNS_time_handler();
+    /* add music player timers here too ? */
+}
