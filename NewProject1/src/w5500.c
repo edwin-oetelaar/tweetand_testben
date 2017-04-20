@@ -101,7 +101,7 @@ void     WIZCHIP_READ_BUF (uint32_t AddrSel, uint8_t* pBuf, uint16_t len)
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x00FF0000) >> 16);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x0000FF00) >>  8);
     WIZCHIP.IF.SPI._write_byte((AddrSel & 0x000000FF) >>  0);
-    for(i = 0; i < len; i++,j) {
+    for(i = 0; i < len; i++) {
         pBuf[i] = WIZCHIP.IF.SPI._read_byte();
     }
 #elif( _WIZCHIP_IO_MODE_ == _WIZCHIP_IO_MODE_SPI_FDM_ )

@@ -798,6 +798,7 @@ uint8_t stream_to_test_server(uint8_t sn, const char *host, uint16_t port, const
 
 uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
 {
+    (void) p;
     // create buffer
     /* start data pump here */
     radio_player_t *rp = pvPortMalloc(sizeof(radio_player_t));
@@ -814,7 +815,8 @@ uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
         while (bezigblijven) {
             VS_Registers_Init();
             /* zet volume zacht van de output */
-            VS_Volume_Set(0x4040);
+             VS_Volume_Set(0x4040);
+            //VS_Volume_Set(0x0202);
             // xprintf("rec test serial %d\r\n", bufsize);
             memset(rp, 0, sizeof(radio_player_t));
             rp->devicemode = DevMode_TX_Ice_Serial;
@@ -839,13 +841,13 @@ uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
                 /* check level of the recording */
                 uint32_t lrmax = VS_Read_mem32(PAR_ENC_CHANNEL_MAX);
                 uint16_t level = (uint16_t) lrmax & 0xFFFF;
-//                xprintf("max = %u %u\r\n", (uint16_t) lrmax & 0xFFFF );
+                xprintf("max = %d\r\n", level ); //(uint16_t) lrmax & 0xFFFF );
                 VS_Write_mem32(PAR_ENC_CHANNEL_MAX, 0x00000000);
 
-                if (level < 2000 && listening == 0) {
+                if (level < 7000 && listening == 0) {
                     /* level niet gezien, alle data weggooien van de opname */
                     jack_ringbuffer_read_advance(streambuffer,jack_ringbuffer_read_space (streambuffer));
-                    // xprintf("silence\r\n");
+                     xprintf("silence\r\n");
                     vTaskDelay(10);
                 } else {
                     /* level gezien, opname starten */
@@ -873,13 +875,17 @@ uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
 //                xprintf("max = %u %u\r\n", (uint16_t) lrmax & 0xFFFF );
                 VS_Write_mem32(PAR_ENC_CHANNEL_MAX, 0x00000000);
 
-                if (level < 2000 && listening == 1) {
+                if (level < 5000 && listening == 1) {
                     nn++;
                     if (nn > 100) {
                         listening = 0; /* niet meer luisteren */
                         nn=0;
                         xprintf("silence quit rec\r\n");
                         break;
+                    }
+                } else {
+                    if (level > 5000 && listening ==1 ) {
+                        nn=0; /* nog herrie, blijven luisteren */
                     }
                 }
 
@@ -946,7 +952,7 @@ uint8_t parrot_stream(const struct channel *p, volatile uint32_t *status)
             /* nu de playback zooi */
             // VS_cancel_stream();
             VS_Registers_Init(); // set alles op defaults, incl clocks en sound level
-            VS_Volume_Set((playout_volume << 8) | playout_volume);
+           // VS_Volume_Set((playout_volume << 8) | playout_volume);
             VS_PitchControl_Set( 6 /*10*/);
             player_active_flag=1;
             while (1) {

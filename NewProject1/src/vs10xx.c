@@ -747,8 +747,8 @@ uint8_t VS_SPI_SendByte(uint8_t const byte)
 
 static const enc_preset_t enc_presets[] = {{
         .samplerate= 24000U, /*samplerate 24000*/
-        .rec_volume = 0, /* agc on */
-        .max_agc_gain = 1024 * 16, /* max gain agc maximum */
+        .rec_volume = 4096, /* agc on ==0 */
+        .max_agc_gain = 1024 * 4, /* max gain agc maximum  64k */
         .rec_format = RM_63_FORMAT_MP3 | RM_63_ADC_MODE_MONO, /* mono mp3 */
         .mode_bitrate = RQ_MODE_CBR | RQ_MULT_1000 | 32  // 0xE010, /* CBR MP3 16Kbps */
     }, {
@@ -1003,7 +1003,7 @@ void VS_PitchControl_Set(uint16_t enable)
     xprintf("speedshift=%d\n",speedshift);
     VS_Write_mem(PAR_SPEED_SHIFTER,speedshift);
 
-    xprintf("ratetune=%d\n",ratetune);
+    xprintf("ratetune=%" PRId32"\n",ratetune);
     VS_Write_mem32(PAR_RATE_TUNE, ratetune);
 
     xprintf("playmode=%x\n",playmode);

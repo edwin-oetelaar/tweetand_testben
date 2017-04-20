@@ -9,7 +9,7 @@
 jack_ringbuffer_t *
 jack_ringbuffer_create (size_t sz)
 {
-    int power_of_two;
+    uint32_t power_of_two;
     jack_ringbuffer_t *rb;
 
     if ((rb = pvPortMalloc (sizeof (jack_ringbuffer_t))) == NULL) {

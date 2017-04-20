@@ -108,6 +108,7 @@ uint8_t wizchip_spi_readbyte(void)
  */
 uint8_t 	wizchip_spi_writebyte(uint8_t wb)
 {
+    (void)wb; // discard data byte
     return 0;
 };
 
